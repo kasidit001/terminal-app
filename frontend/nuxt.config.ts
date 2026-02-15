@@ -3,7 +3,8 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   modules: [
     '@nuxtjs/tailwindcss',
-    'nuxt-mapbox'
+    'nuxt-mapbox',
+    '@pinia/nuxt'
   ],
   mapbox: {
     accessToken: 'YOUR_MAPBOX_PUBLIC_TOKEN_HERE' // Grab a free default public token from mapbox.com
