@@ -2,62 +2,67 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 export const useFlightStore = defineStore('flight', () => {
-  const flight = ref<any>(null); // Replace 'any' with a proper type later
-  const progress = ref(0);
-  const intervalId = ref<any>(null);
+  // State
+  const status = ref<'draft' | 'active'>('draft');
+  const timeRemaining = ref(0); // in seconds
+  const currentFlightId = ref<string | null>(null);
+  
+  // Internal timer reference
+  let timerInterval: ReturnType<typeof setInterval> | null = null;
 
-  const startFlight = async (flightData: {
-    flightNumber: string;
-    origin: string;
-    destination: string;
-    taskCategory: string;
+  // Actions
+  const startFlight = async (payload: { 
+    departureCode: string; 
+    arrivalCode: string; 
+    taskCategory: string; 
+    plannedDuration: number; // in minutes
   }) => {
     try {
-      // Create flight via API
       const response = await fetch('http://localhost:4000/api/flights', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(flightData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create flight');
+        throw new Error('Failed to start flight');
       }
 
-      flight.value = await response.json();
+      const data = await response.json();
       
-      // Start progress simulation
-      startProgress();
+      // Update State
+      currentFlightId.value = data.id;
+      status.value = 'active';
+      timeRemaining.value = payload.plannedDuration * 60; // Convert minutes to seconds
+
+      // Start Countdown
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (timeRemaining.value > 0) {
+          timeRemaining.value--;
+        } else {
+          landFlight(); // Auto-land when time runs out
+        }
+      }, 1000);
+
     } catch (error) {
       console.error('Error starting flight:', error);
     }
   };
 
-  const startProgress = () => {
-    if (intervalId.value) clearInterval(intervalId.value);
-    progress.value = 0;
-
-    intervalId.value = setInterval(() => {
-      if (progress.value < 100) {
-        progress.value += 1;
-      } else {
-        landFlight();
-      }
-    }, 100); // Adjust speed as needed
-  };
-
   const landFlight = async () => {
-    if (intervalId.value) {
-      clearInterval(intervalId.value);
-      intervalId.value = null;
+    // Clear interval immediately
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
     }
 
-    if (!flight.value) return;
+    if (!currentFlightId.value) return;
 
     try {
-      const response = await fetch(`http://localhost:4000/api/flights/${flight.value.id}/land`, {
+      const response = await fetch(`http://localhost:4000/api/flights/${currentFlightId.value}/land`, {
         method: 'PATCH',
       });
 
@@ -65,16 +70,20 @@ export const useFlightStore = defineStore('flight', () => {
         throw new Error('Failed to land flight');
       }
 
-      const updatedFlight = await response.json();
-      flight.value = { ...flight.value, status: updatedFlight.status, arrivalTime: updatedPhase };
+      // Reset State to Draft (Ready for next flight)
+      status.value = 'draft';
+      currentFlightId.value = null;
+      timeRemaining.value = 0;
+
     } catch (error) {
       console.error('Error landing flight:', error);
     }
   };
 
   return {
-    flight,
-    progress,
+    status,
+    timeRemaining,
+    currentFlightId,
     startFlight,
     landFlight,
   };

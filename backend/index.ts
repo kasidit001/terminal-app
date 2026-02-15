@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
+// Routes
 app.use('/api', flightRoutes);
 
 // Sync database and start server
@@ -18,8 +19,8 @@ app.use('/api', flightRoutes);
     await sequelize.authenticate();
     console.log('Database connection has been established successfully.');
     
-    // Sync models
-    await sequelize.sync({ force: false }); // Use force: true only for dev resets
+    // Sync models - using force: false to avoid data loss
+    await sequelize.sync({ force: false }); 
     console.log('Database synchronized.');
 
     app.listen(PORT, () => {

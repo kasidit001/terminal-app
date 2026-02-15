@@ -2,34 +2,34 @@ import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
 
 export enum FlightStatus {
-  SCHEDULED = 'SCHEDULED',
-  ACTIVE = 'ACTIVE',
-  LANDED = 'LANDED',
-  CANCELLED = 'CANCELLED',
+  BOARDING = 'boarding',
+  IN_FLIGHT = 'in-flight',
+  LANDED = 'landed',
+  CANCELLED = 'cancelled',
 }
 
 interface FlightAttributes {
   id: string;
-  flightNumber: string;
-  origin: string;
-  destination: string;
+  departureCode: string;
+  arrivalCode: string;
+  taskCategory: string;
+  plannedDuration: number; // in minutes
   status: FlightStatus;
-  departureTime?: Date;
-  arrivalTime?: Date;
-  taskCategory?: string; // Mentioned in UI phase
+  
+  // Timestamps
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-interface FlightCreationAttributes extends Optional<FlightAttributes, 'id' | 'status' | 'departureTime' | 'arrivalTime'> {}
+interface FlightCreationAttributes extends Optional<FlightAttributes, 'id' | 'status' | 'createdAt' | 'updatedAt'> {}
 
 class Flight extends Model<FlightAttributes, FlightCreationAttributes> implements FlightAttributes {
   public id!: string;
-  public flightNumber!: string;
-  public origin!: string;
-  public destination!: string;
+  public departureCode!: string;
+  public arrivalCode!: string;
+  public taskCategory!: string;
+  public plannedDuration!: number;
   public status!: FlightStatus;
-  public departureTime?: Date;
-  public arrivalTime?: Date;
-  public taskCategory?: string;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -42,39 +42,32 @@ Flight.init(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-    flightNumber: {
+    departureCode: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    origin: {
+    arrivalCode: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    destination: {
+    taskCategory: {
       type: DataTypes.STRING,
+      allowNull: false,
+    },
+    plannedDuration: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     status: {
       type: DataTypes.ENUM(...Object.values(FlightStatus)),
-      defaultValue: FlightStatus.SCHEDULED,
+      defaultValue: FlightStatus.BOARDING,
       allowNull: false,
-    },
-    departureTime: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    arrivalTime: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    taskCategory: {
-      type: DataTypes.STRING,
-      allowNull: true,
     },
   },
   {
     sequelize,
     tableName: 'flights',
+    timestamps: true,
   }
 );
 
