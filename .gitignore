@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editors & Tools
+.idea/
+.vscode/
+*.swp
+*.swo
+.fleet/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build Outputs (Nuxt, generic)
+.output/
+.nuxt/
+.nitro/
+.cache/
+dist/
+build/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Testing
+coverage/
