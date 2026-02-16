@@ -111,7 +111,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useFlightStore } from '@/stores/useFlightStore';
+import { useFlightStore } from '../stores/useFlightStore';
 
 const flightStore = useFlightStore();
 

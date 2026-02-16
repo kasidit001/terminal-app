@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-// Nuxt auto-imports components
+import FlightTicket from './components/FlightTicket.vue';
 </script>
 
 <style>
