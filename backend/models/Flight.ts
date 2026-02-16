@@ -13,15 +13,18 @@ interface FlightAttributes {
   departureCode: string;
   arrivalCode: string;
   taskCategory: string;
-  plannedDuration: number; // in minutes
+  plannedDuration: number;
   status: FlightStatus;
-  
-  // Timestamps
+  seatNumber?: string;
+  distance?: number;
+  startedAt?: Date;
+  completedAt?: Date;
+
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface FlightCreationAttributes extends Optional<FlightAttributes, 'id' | 'status' | 'createdAt' | 'updatedAt'> {}
+interface FlightCreationAttributes extends Optional<FlightAttributes, 'id' | 'status' | 'seatNumber' | 'distance' | 'startedAt' | 'completedAt' | 'createdAt' | 'updatedAt'> {}
 
 class Flight extends Model<FlightAttributes, FlightCreationAttributes> implements FlightAttributes {
   public id!: string;
@@ -30,6 +33,10 @@ class Flight extends Model<FlightAttributes, FlightCreationAttributes> implement
   public taskCategory!: string;
   public plannedDuration!: number;
   public status!: FlightStatus;
+  public seatNumber!: string;
+  public distance!: number;
+  public startedAt!: Date;
+  public completedAt!: Date;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -62,6 +69,22 @@ Flight.init(
       type: DataTypes.ENUM(...Object.values(FlightStatus)),
       defaultValue: FlightStatus.BOARDING,
       allowNull: false,
+    },
+    seatNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    distance: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    startedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    completedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   },
   {

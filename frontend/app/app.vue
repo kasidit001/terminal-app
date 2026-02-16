@@ -1,39 +1,40 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white font-sans antialiased selection:bg-cyan-500/30">
+  <div class="min-h-screen bg-surface text-white font-sans antialiased">
     <NuxtRouteAnnouncer />
-    
-    <!-- Main Content Area -->
-    <main class="flex items-center justify-center min-h-screen p-4 relative overflow-hidden">
-      <!-- Background Elements -->
-      <div class="absolute inset-0 z-0 pointer-events-none">
-        <div class="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-3xl animate-blob"></div>
-        <div class="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
-      </div>
 
-      <!-- Interactive UI -->
-      <div class="relative z-10 w-full max-w-md pointer-events-auto">
-        <FlightTicket />
-      </div>
-    </main>
+    <Transition name="view-fade" mode="out-in">
+      <WelcomeScreen v-if="appStore.currentView === 'welcome'" key="welcome" />
+      <AirportSetup v-else-if="appStore.currentView === 'airport-setup'" key="airport-setup" />
+      <HomeMap v-else-if="appStore.currentView === 'home'" key="home" />
+      <BoardingCard v-else-if="appStore.currentView === 'boarding'" key="boarding" />
+      <InFlightView v-else-if="appStore.currentView === 'in-flight'" key="in-flight" />
+      <LandedSummary v-else-if="appStore.currentView === 'landed'" key="landed" />
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import FlightTicket from './components/FlightTicket.vue';
+import { onMounted } from 'vue'
+import { useAppStore } from './stores/useAppStore'
+
+const appStore = useAppStore()
+
+onMounted(() => {
+  appStore.initialize()
+})
 </script>
 
 <style>
-/* Global Styles or Animation Utilities */
-@keyframes blob {
-  0% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-  100% { transform: translate(0px, 0px) scale(1); }
+.view-fade-enter-active,
+.view-fade-leave-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
-.animate-blob {
-  animation: blob 7s infinite;
+.view-fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
 }
-.animation-delay-2000 {
-  animation-delay: 2s;
+.view-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>

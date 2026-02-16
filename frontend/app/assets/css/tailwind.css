@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@layer base {
+  body {
+    @apply bg-surface text-white antialiased;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+
+  .flight-badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-flight-400/60
+           bg-flight-400/10 text-flight-400 font-mono text-xs font-bold tracking-wider;
+  }
+
+  .flight-badge-lg {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-flight-400
+           bg-flight-400/10 text-flight-400 font-mono text-sm font-bold tracking-wider;
+  }
+
+  .iata-large {
+    @apply text-4xl font-bold font-mono tracking-tight text-white;
+  }
+
+  .label-sm {
+    @apply text-[10px] font-mono text-gray-500 uppercase tracking-widest;
+  }
+
+  .btn-primary {
+    @apply w-full bg-white hover:bg-gray-100 text-black font-bold py-4 rounded-2xl text-lg
+           transition-all transform hover:scale-[1.02] shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium
+           py-3.5 rounded-2xl transition-all;
+  }
+}
+
+/* Leaflet dark theme overrides */
+.leaflet-container {
+  background: #0A0A0A !important;
+}
+
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Airport marker on map */
+.airport-marker {
+  background: none !important;
+  border: none !important;
+}
