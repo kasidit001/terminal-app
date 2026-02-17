@@ -1,4 +1,6 @@
 // nuxt.config.ts
+import cesium from 'vite-plugin-cesium'
+
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   modules: [
@@ -11,14 +13,7 @@ export default defineNuxtConfig({
     exposeConfig: false,
     viewer: true,
   },
-  app: {
-    head: {
-      link: [
-        {
-          rel: 'stylesheet',
-          href: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        }
-      ]
-    }
-  }
+  vite: {
+    plugins: [cesium()],
+  },
 })

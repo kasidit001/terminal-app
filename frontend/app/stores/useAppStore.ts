@@ -15,6 +15,8 @@ export type AppView =
   | 'airport-setup'
   | 'home'
   | 'boarding'
+  | 'seat-selection'
+  | 'activity-selection'
   | 'in-flight'
   | 'landed'
 

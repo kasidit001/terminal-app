@@ -1,22 +1,16 @@
 <template>
   <div class="relative w-full h-screen overflow-hidden bg-surface">
-    <!-- Background Map -->
+    <!-- Background Globe -->
     <div class="absolute inset-0 opacity-20">
       <ClientOnly>
-        <LMap
-          :zoom="3"
-          :center="mapCenter"
-          :zoom-control="false"
-          :dragging="false"
-          :scroll-wheel-zoom="false"
-          :double-click-zoom="false"
-          :touch-zoom="false"
-          :keyboard="false"
-          :attribution-control="false"
-          style="width: 100%; height: 100%"
-        >
-          <LTileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-        </LMap>
+        <CesiumGlobe
+          ref="globeRef"
+          :interactive="false"
+          :show-atmosphere="false"
+          :initial-lat="20"
+          :initial-lng="100"
+          :initial-height="15000000"
+        />
       </ClientOnly>
     </div>
 
@@ -109,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useAppStore, type Airport } from '../stores/useAppStore'
 import { useAirports } from '../composables/useAirports'
 import { useGeolocation } from '../composables/useGeolocation'
@@ -117,18 +111,19 @@ import { useGeolocation } from '../composables/useGeolocation'
 const appStore = useAppStore()
 const airportSearch = useAirports()
 const geo = useGeolocation()
+const globeRef = ref()
 
 const confirmAirport = ref<Airport | null>(null)
-const mapCenter = ref<[number, number]>([20, 100])
 
 const handleAirportSelect = (airport: Airport) => {
   confirmAirport.value = airport
+  globeRef.value?.cesium?.flyTo(airport.lat, airport.lng, 5000000)
 }
 
 const handleUseLocation = async () => {
   try {
     const { lat, lng } = await geo.requestLocation()
-    mapCenter.value = [lat, lng]
+    globeRef.value?.cesium?.flyTo(lat, lng, 5000000)
     const nearest = airportSearch.findNearest(lat, lng, 10)
     if (nearest.length > 0) {
       airportSearch.searchQuery.value = nearest[0].city
@@ -141,7 +136,7 @@ const handleUseLocation = async () => {
 const handleRandomLocation = () => {
   const airport = airportSearch.getRandomAirport()
   confirmAirport.value = airport
-  mapCenter.value = [airport.lat, airport.lng]
+  globeRef.value?.cesium?.flyTo(airport.lat, airport.lng, 5000000)
 }
 
 const handleConfirm = () => {

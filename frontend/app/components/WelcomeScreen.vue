@@ -1,24 +1,14 @@
 <template>
   <div class="relative w-full h-screen overflow-hidden">
-    <!-- Background Map -->
-    <div class="absolute inset-0 opacity-25">
+    <!-- Background Globe -->
+    <div class="absolute inset-0 opacity-40">
       <ClientOnly>
-        <LMap
-          :zoom="2"
-          :center="[20, 0]"
-          :zoom-control="false"
-          :dragging="false"
-          :scroll-wheel-zoom="false"
-          :double-click-zoom="false"
-          :touch-zoom="false"
-          :keyboard="false"
-          :attribution-control="false"
-          style="width: 100%; height: 100%"
-        >
-          <LTileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          />
-        </LMap>
+        <CesiumGlobe
+          :interactive="false"
+          :show-atmosphere="true"
+          :initial-height="25000000"
+          :auto-rotate-speed="0.5"
+        />
       </ClientOnly>
     </div>
 
@@ -41,7 +31,7 @@
         Welcome to
       </h1>
       <h1 class="text-5xl font-bold tracking-tight text-white text-center mt-2">
-        FocusFlight
+        Focus<span class="text-flight-400">Flight</span>
       </h1>
 
       <!-- Subtitle -->

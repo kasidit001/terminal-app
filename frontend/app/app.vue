@@ -1,23 +1,17 @@
 <template>
   <div class="min-h-screen bg-surface text-white font-sans antialiased">
     <NuxtRouteAnnouncer />
-    
-    <!-- New Router View -->
-    <NuxtLayout>
-      <NuxtPage />
-    </NuxtLayout>
 
-    <!-- Old Manual View Switching (Disabled for now) -->
-    <!--
     <Transition name="view-fade" mode="out-in">
       <WelcomeScreen v-if="appStore.currentView === 'welcome'" key="welcome" />
       <AirportSetup v-else-if="appStore.currentView === 'airport-setup'" key="airport-setup" />
       <HomeMap v-else-if="appStore.currentView === 'home'" key="home" />
       <BoardingCard v-else-if="appStore.currentView === 'boarding'" key="boarding" />
+      <SeatSelection v-else-if="appStore.currentView === 'seat-selection'" key="seat-selection" />
+      <ActivitySelection v-else-if="appStore.currentView === 'activity-selection'" key="activity-selection" />
       <InFlightView v-else-if="appStore.currentView === 'in-flight'" key="in-flight" />
       <LandedSummary v-else-if="appStore.currentView === 'landed'" key="landed" />
     </Transition>
-    -->
   </div>
 </template>
 

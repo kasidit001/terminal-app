@@ -1,17 +1,19 @@
 <template>
   <div class="flex items-center justify-center min-h-screen bg-surface p-4">
     <div class="w-full max-w-md">
-      <!-- Ticket card -->
-      <div class="glass-card overflow-hidden">
-        <!-- Route map -->
-        <div class="h-36">
-          <FlightRouteMap
+      <!-- Globe route map -->
+      <div class="h-48 rounded-t-2xl overflow-hidden">
+        <ClientOnly>
+          <GlobeRouteMap
             v-if="flightStore.departureAirport && flightStore.arrivalAirport"
             :departure="flightStore.departureAirport"
             :arrival="flightStore.arrivalAirport"
           />
-        </div>
+        </ClientOnly>
+      </div>
 
+      <!-- Ticket card -->
+      <div class="glass-card !rounded-t-none overflow-hidden" ref="ticketRef">
         <div class="p-6 space-y-5">
           <!-- IATA codes row -->
           <div class="flex items-center justify-between">
@@ -29,7 +31,6 @@
                 </svg>
                 <div class="w-8 h-px bg-flight-400/30" />
               </div>
-              <p class="text-[10px] text-gray-500 font-mono">{{ flightStore.distance }} km</p>
             </div>
 
             <div class="text-right">
@@ -46,39 +47,48 @@
           </div>
 
           <!-- Details grid -->
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-2 gap-4">
             <div>
               <p class="label-sm">Seat</p>
-              <p class="text-white font-mono font-bold mt-1">{{ flightStore.seatNumber }}</p>
+              <p class="text-white font-mono font-bold mt-1">
+                {{ flightStore.seatNumber || '---' }}
+              </p>
             </div>
+            <div class="text-right">
+              <p class="label-sm">Distance</p>
+              <p class="text-white font-mono font-bold mt-1">
+                {{ flightStore.distance.toLocaleString() }}
+                <span class="text-gray-500 text-xs">km</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
             <div>
               <p class="label-sm">Boarding</p>
               <p class="text-flight-400 font-mono font-bold mt-1">Now</p>
             </div>
-            <div>
+            <div class="text-right">
               <p class="label-sm">Date</p>
               <p class="text-white font-mono text-sm mt-1">{{ todayFormatted }}</p>
             </div>
           </div>
 
-          <!-- Mission -->
-          <div>
-            <p class="label-sm">Mission</p>
-            <div class="mt-1.5">
-              <span class="inline-flex items-center px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-sm text-white font-medium">
-                {{ flightStore.taskCategory }}
-              </span>
-            </div>
+          <!-- Barcode -->
+          <div class="pt-2">
+            <ClientOnly>
+              <BarcodeDisplay :text="barcodeText" />
+            </ClientOnly>
           </div>
         </div>
       </div>
 
-      <!-- Take off button -->
+      <!-- Check in button -->
       <button
         class="btn-primary mt-6"
-        @click="handleTakeOff"
+        @click="handleCheckIn"
       >
-        TAKE OFF
+        Check in
       </button>
 
       <!-- Cancel -->
@@ -93,21 +103,29 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useAppStore } from '../stores/useAppStore'
 import { useFlightStore } from '../stores/useFlightStore'
 
 const appStore = useAppStore()
 const flightStore = useFlightStore()
+const ticketRef = ref<HTMLElement>()
 
 const todayFormatted = computed(() => {
   const d = new Date()
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
 })
 
-const handleTakeOff = async () => {
-  await flightStore.startFlight()
-  appStore.navigateTo('in-flight')
+const barcodeText = computed(() => {
+  const dep = flightStore.departureAirport?.iata || 'XXX'
+  const arr = flightStore.arrivalAirport?.iata || 'XXX'
+  const date = todayFormatted.value.replace(/\//g, '')
+  return `FF-${dep}-${arr}-${date}`
+})
+
+const handleCheckIn = () => {
+  flightStore.checkIn()
+  appStore.navigateTo('seat-selection')
 }
 
 const handleCancel = () => {

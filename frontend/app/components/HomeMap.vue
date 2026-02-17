@@ -1,30 +1,17 @@
 <template>
   <div class="relative w-full h-screen overflow-hidden">
-    <!-- Full-screen map -->
+    <!-- Full-screen globe -->
     <div class="absolute inset-0">
       <ClientOnly>
-        <LMap
-          ref="mapRef"
-          :zoom="5"
-          :center="[appStore.homeAirport!.lat, appStore.homeAirport!.lng]"
-          :zoom-control="false"
-          :attribution-control="false"
-          style="width: 100%; height: 100%"
-        >
-          <LTileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-
-          <!-- Home airport marker -->
-          <LMarker :lat-lng="[appStore.homeAirport!.lat, appStore.homeAirport!.lng]">
-            <LIcon :icon-size="[60, 28]" :icon-anchor="[30, 14]" class-name="airport-marker">
-              <div class="flight-badge-lg">
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-                </svg>
-                {{ appStore.homeAirport!.iata }}
-              </div>
-            </LIcon>
-          </LMarker>
-        </LMap>
+        <CesiumGlobe
+          ref="globeRef"
+          :interactive="true"
+          :show-atmosphere="true"
+          :initial-lat="appStore.homeAirport!.lat"
+          :initial-lng="appStore.homeAirport!.lng"
+          :initial-height="8000000"
+          @ready="onGlobeReady"
+        />
       </ClientOnly>
     </div>
 
@@ -36,7 +23,7 @@
             <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
           </svg>
         </div>
-        <span class="text-white font-bold text-lg">FocusFlight</span>
+        <span class="text-white font-bold text-lg">Focus<span class="text-flight-400">Flight</span></span>
       </div>
 
       <!-- Home airport info -->
@@ -111,24 +98,6 @@
           </div>
         </div>
 
-        <!-- Task category -->
-        <div>
-          <label class="label-sm mb-2 block">FLIGHT MISSION</label>
-          <div class="grid grid-cols-3 gap-2">
-            <button
-              v-for="task in tasks"
-              :key="task"
-              class="px-3 py-2.5 rounded-xl text-sm font-medium transition-all border"
-              :class="selectedTask === task
-                ? 'bg-flight-400/10 border-flight-400/40 text-flight-400'
-                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'"
-              @click="selectedTask = task"
-            >
-              {{ task }}
-            </button>
-          </div>
-        </div>
-
         <!-- Duration -->
         <div>
           <label class="label-sm mb-2 block">DURATION (MINUTES)</label>
@@ -173,23 +142,33 @@ import { useAppStore, type Airport } from '../stores/useAppStore'
 import { useFlightStore } from '../stores/useFlightStore'
 import { useAirports } from '../composables/useAirports'
 import { useGreatCircle } from '../composables/useGreatCircle'
+import type { useCesium } from '../composables/useCesium'
 
 const appStore = useAppStore()
 const flightStore = useFlightStore()
 const arrivalSearch = useAirports()
 const { getDistance } = useGreatCircle()
 
+const globeRef = ref()
 const showNewFlight = ref(false)
 const selectedArrival = ref<Airport | null>(null)
-const selectedTask = ref('Coding')
 const duration = ref(25)
 
-const tasks = ['Coding', 'Writing', 'Design', 'Research', 'Study', 'Meeting']
 const presetDurations = [15, 25, 45, 60]
 
 const canBoard = computed(() =>
-  selectedArrival.value && selectedTask.value && duration.value > 0
+  selectedArrival.value && duration.value > 0
 )
+
+const onGlobeReady = (cesium: ReturnType<typeof useCesium>) => {
+  if (appStore.homeAirport) {
+    cesium.addAirportMarker({
+      iata: appStore.homeAirport.iata,
+      lat: appStore.homeAirport.lat,
+      lng: appStore.homeAirport.lng,
+    })
+  }
+}
 
 const handleArrivalSelect = (airport: Airport) => {
   selectedArrival.value = airport
@@ -207,7 +186,6 @@ const handleBoardFlight = () => {
   flightStore.bookFlight({
     departure: appStore.homeAirport,
     arrival: selectedArrival.value,
-    task: selectedTask.value,
     duration: duration.value,
     dist,
   })
@@ -217,7 +195,6 @@ const handleBoardFlight = () => {
 
   // Reset form
   selectedArrival.value = null
-  selectedTask.value = 'Coding'
   duration.value = 25
 }
 </script>

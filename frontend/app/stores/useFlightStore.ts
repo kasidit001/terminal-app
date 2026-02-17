@@ -9,10 +9,13 @@ export const useFlightStore = defineStore('flight', () => {
   const currentFlightId = ref<string | null>(null)
   const departureAirport = ref<Airport | null>(null)
   const arrivalAirport = ref<Airport | null>(null)
-  const taskCategory = ref('')
   const plannedDuration = ref(25)
   const seatNumber = ref('')
   const distance = ref(0)
+  const focusActivity = ref('')
+  const customActivityName = ref('')
+  const boardingStatus = ref<'pending' | 'checked-in' | 'boarding'>('pending')
+  const speedMultiplier = ref(1)
 
   const timeRemaining = ref(0)
   const totalSeconds = ref(0)
@@ -30,33 +33,55 @@ export const useFlightStore = defineStore('flight', () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   })
 
+  const distanceRemaining = computed(() => {
+    if (distance.value === 0) return 0
+    return Math.round(distance.value * (1 - progressPercent.value / 100))
+  })
+
+  const timeRemainingMinutes = computed(() => {
+    return Math.ceil(timeRemaining.value / 60)
+  })
+
   const isActive = computed(() =>
     status.value === 'in-flight' || status.value === 'paused'
   )
 
-  const generateSeat = (): string => {
-    const row = Math.floor(Math.random() * 30) + 1
-    const col = ['A', 'B', 'C', 'D', 'E', 'F'][Math.floor(Math.random() * 6)]
-    return `${row}${col}`
-  }
+  const elapsedSeconds = computed(() =>
+    totalSeconds.value - timeRemaining.value
+  )
 
   const bookFlight = (params: {
     departure: Airport
     arrival: Airport
-    task: string
     duration: number
     dist: number
   }) => {
     departureAirport.value = params.departure
     arrivalAirport.value = params.arrival
-    taskCategory.value = params.task
     plannedDuration.value = params.duration
     distance.value = Math.round(params.dist)
-    seatNumber.value = generateSeat()
+    seatNumber.value = ''
+    focusActivity.value = ''
+    customActivityName.value = ''
+    boardingStatus.value = 'pending'
     status.value = 'boarding'
   }
 
+  const selectSeat = (seat: string) => {
+    seatNumber.value = seat
+  }
+
+  const selectActivity = (activity: string, customName?: string) => {
+    focusActivity.value = activity
+    if (customName) customActivityName.value = customName
+  }
+
+  const checkIn = () => {
+    boardingStatus.value = 'checked-in'
+  }
+
   const startFlight = async () => {
+    boardingStatus.value = 'boarding'
     try {
       const response = await fetch('http://localhost:4000/api/flights', {
         method: 'POST',
@@ -64,10 +89,11 @@ export const useFlightStore = defineStore('flight', () => {
         body: JSON.stringify({
           departureCode: departureAirport.value?.iata,
           arrivalCode: arrivalAirport.value?.iata,
-          taskCategory: taskCategory.value,
+          taskCategory: focusActivity.value || 'Focus',
           plannedDuration: plannedDuration.value,
           seatNumber: seatNumber.value,
           distance: distance.value,
+          focusActivity: focusActivity.value,
         }),
       })
       if (!response.ok) throw new Error('Failed to start flight')
@@ -80,6 +106,11 @@ export const useFlightStore = defineStore('flight', () => {
       startTimer()
     } catch (error) {
       console.error('Error starting flight:', error)
+      // Start timer locally even if API fails
+      totalSeconds.value = plannedDuration.value * 60
+      timeRemaining.value = totalSeconds.value
+      status.value = 'in-flight'
+      startTimer()
     }
   }
 
@@ -91,7 +122,7 @@ export const useFlightStore = defineStore('flight', () => {
       } else {
         landFlight()
       }
-    }, 1000)
+    }, 1000 / speedMultiplier.value)
   }
 
   const pauseFlight = () => {
@@ -107,19 +138,26 @@ export const useFlightStore = defineStore('flight', () => {
     startTimer()
   }
 
+  const setSpeed = (speed: number) => {
+    speedMultiplier.value = speed
+    if (status.value === 'in-flight') {
+      startTimer()
+    }
+  }
+
   const landFlight = async () => {
     if (timerInterval) {
       clearInterval(timerInterval)
       timerInterval = null
     }
-    if (!currentFlightId.value) return
-
-    try {
-      await fetch(`http://localhost:4000/api/flights/${currentFlightId.value}/land`, {
-        method: 'PATCH',
-      })
-    } catch (error) {
-      console.error('Error landing flight:', error)
+    if (currentFlightId.value) {
+      try {
+        await fetch(`http://localhost:4000/api/flights/${currentFlightId.value}/land`, {
+          method: 'PATCH',
+        })
+      } catch (error) {
+        console.error('Error landing flight:', error)
+      }
     }
     status.value = 'landed'
   }
@@ -146,18 +184,24 @@ export const useFlightStore = defineStore('flight', () => {
     currentFlightId.value = null
     departureAirport.value = null
     arrivalAirport.value = null
-    taskCategory.value = ''
     plannedDuration.value = 25
     seatNumber.value = ''
     distance.value = 0
+    focusActivity.value = ''
+    customActivityName.value = ''
+    boardingStatus.value = 'pending'
+    speedMultiplier.value = 1
     timeRemaining.value = 0
     totalSeconds.value = 0
   }
 
   return {
     status, currentFlightId, departureAirport, arrivalAirport,
-    taskCategory, plannedDuration, seatNumber, distance,
-    timeRemaining, totalSeconds, progressPercent, formattedTime, isActive,
-    bookFlight, startFlight, pauseFlight, resumeFlight, landFlight, cancelFlight, reset,
+    plannedDuration, seatNumber, distance,
+    focusActivity, customActivityName, boardingStatus, speedMultiplier,
+    timeRemaining, totalSeconds, progressPercent, formattedTime,
+    distanceRemaining, timeRemainingMinutes, isActive, elapsedSeconds,
+    bookFlight, selectSeat, selectActivity, checkIn,
+    startFlight, pauseFlight, resumeFlight, setSpeed, landFlight, cancelFlight, reset,
   }
 })
