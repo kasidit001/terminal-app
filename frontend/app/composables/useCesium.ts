@@ -18,6 +18,13 @@ export function useCesium(options: CesiumGlobeOptions) {
     // Hide default credits in a detached element
     const creditContainer = document.createElement('div')
 
+    // Use bundled NaturalEarth tiles — no Cesium Ion token required
+    const naturalEarthLayer = Cesium.ImageryLayer.fromProviderAsync(
+      Cesium.TileMapServiceImageryProvider.fromUrl(
+        Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
+      )
+    )
+
     const v = new Cesium.Viewer(options.container.value, {
       animation: false,
       baseLayerPicker: false,
@@ -32,6 +39,10 @@ export function useCesium(options: CesiumGlobeOptions) {
       creditContainer,
       requestRenderMode: !options.interactive,
       maximumRenderTimeChange: options.interactive ? undefined : Infinity,
+      // Bundled imagery — avoids needing a Cesium Ion token
+      baseLayer: naturalEarthLayer,
+      // Flat terrain — avoids needing a Cesium Ion token for world terrain
+      terrainProvider: new Cesium.EllipsoidTerrainProvider(),
     })
 
     // Dark globe styling
