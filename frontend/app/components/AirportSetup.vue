@@ -1,15 +1,12 @@
 <template>
-  <div class="relative w-full h-screen overflow-hidden bg-surface">
+  <div class="relative w-full h-screen overflow-hidden bg-[#060d1a]">
     <!-- Background Globe -->
-    <div class="absolute inset-0 opacity-20">
-      <ClientOnly>
-        <GlobeCesiumGlobe ref="globeRef" :interactive="false" :show-atmosphere="false" :initial-lat="20"
-          :initial-lng="100" :initial-height="15000000" />
-      </ClientOnly>
+    <div class="absolute inset-0 opacity-30 scale-110">
+      <GlobeSvgGlobe :show-flight="false" :auto-rotate="true" />
     </div>
 
     <!-- Gradient overlay -->
-    <div class="absolute inset-0 bg-gradient-to-b from-surface/60 via-surface/40 to-surface z-10" />
+    <div class="absolute inset-0 bg-gradient-to-b from-[#060d1a]/60 via-[#060d1a]/40 to-[#060d1a] z-10" />
 
     <!-- Content -->
     <div class="relative z-20 flex flex-col h-full">
