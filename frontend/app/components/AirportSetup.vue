@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full h-screen overflow-hidden bg-[#060d1a]">
+  <div class="relative w-full h-full overflow-hidden bg-[#060d1a]">
     <!-- Background Globe -->
     <div class="absolute inset-0 opacity-30 scale-110">
       <GlobeSvgGlobe :show-flight="false" :auto-rotate="true" />

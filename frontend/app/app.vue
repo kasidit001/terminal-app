@@ -93,14 +93,15 @@ onMounted(() => {
   /* Center the app in a phone-sized card */
   .app-viewport {
     width: 420px;
-    height: min(820px, 92vh);
-    height: min(820px, 92dvh);
+    height: min(860px, 94vh);
+    height: min(860px, 94dvh);
     border-radius: 32px;
     overflow: hidden;
     box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.06),
-      0 32px 80px rgba(0, 0, 0, 0.7),
-      0 0 120px rgba(59, 130, 246, 0.08);
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 40px 100px rgba(0, 0, 0, 0.8),
+      0 0 0 0.5px rgba(59, 130, 246, 0.15) inset,
+      0 0 160px rgba(59, 130, 246, 0.06);
     background: #060d1a;
   }
 }
@@ -109,8 +110,8 @@ onMounted(() => {
 @media (min-width: 1024px) {
   .app-viewport {
     width: 440px;
-    height: min(860px, 92vh);
-    height: min(860px, 92dvh);
+    height: min(880px, 94vh);
+    height: min(880px, 94dvh);
   }
 }
 
