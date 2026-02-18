@@ -18,6 +18,7 @@
         <ActivitySelection v-else-if="appStore.currentView === 'activity-selection'" key="activity-selection" />
         <InFlightView v-else-if="appStore.currentView === 'in-flight'" key="in-flight" />
         <LandedSummary v-else-if="appStore.currentView === 'landed'" key="landed" />
+        <FlightLogbook v-else-if="appStore.currentView === 'logbook'" key="logbook" />
       </Transition>
     </div>
   </div>
