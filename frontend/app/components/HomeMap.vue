@@ -29,7 +29,28 @@
     </div>
 
     <!-- Bottom action area -->
-    <div class="absolute bottom-0 inset-x-0 z-[1000] p-6 pb-10">
+    <div class="absolute bottom-0 inset-x-0 z-[1000] p-6 pb-10 space-y-4">
+      <!-- Stats strip (shown after first flight) -->
+      <div v-if="statsStore.totalFlights > 0" class="w-full max-w-md mx-auto flex items-center justify-center gap-4">
+        <div
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10">
+          <span class="text-sm">🔥</span>
+          <span class="text-xs font-mono font-bold text-flight-400">{{ statsStore.currentStreak }}</span>
+          <span class="text-xs text-gray-500">day streak</span>
+        </div>
+        <div
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10">
+          <span class="text-sm">✈️</span>
+          <span class="text-xs font-mono font-bold text-white">{{ statsStore.totalFlights }}</span>
+          <span class="text-xs text-gray-500">flights</span>
+        </div>
+        <div
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10">
+          <span class="text-sm">{{ statsStore.focusLevel.icon }}</span>
+          <span class="text-xs font-semibold" :class="statsStore.focusLevel.color">{{ statsStore.focusLevel.label
+            }}</span>
+        </div>
+      </div>
       <button class="w-full max-w-md mx-auto block btn-primary" @click="showNewFlight = true">
         New Flight
       </button>
@@ -116,12 +137,14 @@
 import { ref, computed } from 'vue'
 import { useAppStore, type Airport } from '../stores/useAppStore'
 import { useFlightStore } from '../stores/useFlightStore'
+import { useStatsStore } from '../stores/useStatsStore'
 import { useAirports } from '../composables/useAirports'
 import { useGreatCircle } from '../composables/useGreatCircle'
 import type { useCesium } from '../composables/useCesium'
 
 const appStore = useAppStore()
 const flightStore = useFlightStore()
+const statsStore = useStatsStore()
 const arrivalSearch = useAirports()
 const { getDistance } = useGreatCircle()
 
