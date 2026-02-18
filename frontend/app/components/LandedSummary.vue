@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-surface p-6">
+  <div class="flex items-center justify-center h-full bg-surface p-6 overflow-y-auto">
     <div class="w-full max-w-md text-center space-y-5">
       <!-- Globe route map -->
       <div class="h-40 rounded-2xl overflow-hidden">
@@ -56,7 +56,7 @@
         <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.05] border border-white/10">
           <span class="text-lg">{{ statsStore.focusLevel.icon }}</span>
           <span class="text-sm font-semibold" :class="statsStore.focusLevel.color">{{ statsStore.focusLevel.label
-            }}</span>
+          }}</span>
           <span class="text-gray-500 text-xs">·</span>
           <span class="text-gray-400 text-xs">{{ statsStore.currentStreak }} day streak 🔥</span>
         </div>
