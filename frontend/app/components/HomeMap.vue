@@ -26,9 +26,20 @@
       </div>
 
       <!-- Home airport info -->
-      <div class="glass-card px-3 py-1.5 flex items-center gap-2">
-        <span class="text-gray-400 text-xs">HOME</span>
-        <span class="text-flight-400 font-mono font-bold text-sm">{{ appStore.homeAirport!.iata }}</span>
+      <div class="flex items-center gap-2">
+        <div class="glass-card px-3 py-1.5 flex items-center gap-2">
+          <span class="text-gray-400 text-xs">HOME</span>
+          <span class="text-flight-400 font-mono font-bold text-sm">{{ appStore.homeAirport!.iata }}</span>
+        </div>
+        <!-- Logbook button -->
+        <button
+          class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+          title="Flight Logbook" @click="appStore.navigateTo('logbook')">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -53,7 +64,7 @@
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
           <span class="text-sm">{{ statsStore.focusLevel.icon }}</span>
           <span class="text-xs font-semibold" :class="statsStore.focusLevel.color">{{ statsStore.focusLevel.label
-          }}</span>
+            }}</span>
         </div>
       </div>
       <button class="w-full max-w-md mx-auto block btn-primary" @click="showNewFlight = true">
