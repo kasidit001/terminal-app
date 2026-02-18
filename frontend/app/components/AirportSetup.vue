@@ -126,7 +126,7 @@ const handleUseLocation = async () => {
     globeRef.value?.cesium?.flyTo(lat, lng, 5000000)
     const nearest = airportSearch.findNearest(lat, lng, 10)
     if (nearest.length > 0) {
-      airportSearch.searchQuery.value = nearest[0].city
+      airportSearch.searchQuery.value = nearest[0]!.city
     }
   } catch {
     // Geolocation denied or unavailable

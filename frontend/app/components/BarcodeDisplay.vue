@@ -11,7 +11,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 const render = async () => {
   if (!canvasRef.value || !props.text) return
   try {
-    const bwipjs = await import('bwip-js')
+    const bwipjs = (await import('bwip-js')) as any
     bwipjs.toCanvas(canvasRef.value, {
       bcid: 'code128',
       text: props.text,

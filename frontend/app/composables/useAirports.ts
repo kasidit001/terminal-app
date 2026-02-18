@@ -34,7 +34,7 @@ export function useAirports() {
   }
 
   const getRandomAirport = (): Airport => {
-    return airports[Math.floor(Math.random() * airports.length)]
+    return airports[Math.floor(Math.random() * airports.length)]!
   }
 
   return { airports, searchQuery, filteredAirports, findByIata, findNearest, getRandomAirport }

@@ -39,11 +39,11 @@ export function useCesium(options: CesiumGlobeOptions) {
     v.scene.globe.baseColor = Cesium.Color.fromCssColorString('#111111')
     v.scene.globe.enableLighting = false
     v.scene.fog.enabled = false
-    v.scene.skyBox.show = false
-    v.scene.sun.show = false
-    v.scene.moon.show = false
+    if (v.scene.skyBox) v.scene.skyBox.show = false
+    if (v.scene.sun) v.scene.sun.show = false
+    if (v.scene.moon) v.scene.moon.show = false
 
-    if (options.showAtmosphere === false) {
+    if (options.showAtmosphere === false && v.scene.skyAtmosphere) {
       v.scene.skyAtmosphere.show = false
     }
 

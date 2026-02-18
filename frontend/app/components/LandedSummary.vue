@@ -1,16 +1,27 @@
 <template>
   <div class="flex items-center justify-center min-h-screen bg-surface p-6">
-    <div class="w-full max-w-md text-center space-y-8">
+    <div class="w-full max-w-md text-center space-y-6">
+      <!-- Globe route map -->
+      <div class="h-40 rounded-2xl overflow-hidden">
+        <ClientOnly>
+          <GlobeRouteMap
+            v-if="flightStore.departureAirport && flightStore.arrivalAirport"
+            :departure="flightStore.departureAirport"
+            :arrival="flightStore.arrivalAirport"
+          />
+        </ClientOnly>
+      </div>
+
       <!-- Status icon -->
       <div class="flex justify-center">
         <div
-          class="w-20 h-20 rounded-full flex items-center justify-center"
+          class="w-16 h-16 rounded-full flex items-center justify-center"
           :class="isCompleted ? 'bg-emerald-500/10 border-2 border-emerald-500/30' : 'bg-red-500/10 border-2 border-red-500/30'"
         >
-          <svg v-if="isCompleted" class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-if="isCompleted" class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
           </svg>
-          <svg v-else class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-else class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </div>
@@ -21,13 +32,22 @@
         <h1 class="text-3xl font-bold text-white">
           {{ isCompleted ? 'Flight Landed' : 'Flight Cancelled' }}
         </h1>
-        <p class="text-gray-400 mt-2">
-          {{ isCompleted ? 'Well done! Another successful focus session.' : 'Flight ended early.' }}
+        <p class="text-gray-400 mt-2 text-sm">
+          {{ isCompleted ? 'Well done! Another successful focus session.' : 'Flight ended early. Every flight counts.' }}
         </p>
       </div>
 
-      <!-- Route summary -->
-      <div class="glass-card p-6 space-y-4">
+      <!-- Focused time (prominent) -->
+      <div v-if="isCompleted" class="py-2">
+        <p class="label-sm">Focused Time</p>
+        <p class="text-5xl font-mono font-bold text-flight-400 mt-2">
+          {{ focusedMinutes }}<span class="text-2xl text-gray-400">m</span>
+        </p>
+      </div>
+
+      <!-- Flight stats card -->
+      <div class="glass-card p-5 space-y-4" ref="summaryCardRef">
+        <!-- Route -->
         <div class="flex items-center justify-between">
           <div class="text-left">
             <p class="text-2xl font-mono font-bold text-white">{{ flightStore.departureAirport?.iata }}</p>
@@ -46,42 +66,74 @@
           </div>
         </div>
 
-        <div class="border-t border-white/5 pt-4 grid grid-cols-3 gap-4">
-          <div>
+        <div class="border-t border-white/5" />
+
+        <!-- Stats grid -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="text-left">
             <p class="label-sm">Duration</p>
             <p class="text-white font-mono font-bold mt-1">{{ flightStore.plannedDuration }}m</p>
           </div>
-          <div>
+          <div class="text-right">
             <p class="label-sm">Distance</p>
-            <p class="text-white font-mono font-bold mt-1">{{ flightStore.distance }} km</p>
+            <p class="text-white font-mono font-bold mt-1">{{ flightStore.distance.toLocaleString() }} km</p>
           </div>
-          <div>
+          <div class="text-left">
+            <p class="label-sm">Seat</p>
+            <p class="text-white font-mono font-bold mt-1">{{ flightStore.seatNumber || '---' }}</p>
+          </div>
+          <div class="text-right">
             <p class="label-sm">Mission</p>
-            <p class="text-white font-medium text-sm mt-1">{{ flightStore.taskCategory }}</p>
+            <p class="text-white font-medium text-sm mt-1">{{ flightStore.focusActivity || 'Focus' }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Back button -->
-      <button class="btn-primary" @click="handleBack">
-        Back to Terminal
-      </button>
+      <!-- Actions -->
+      <div class="space-y-3 pt-2">
+        <button class="btn-primary" @click="handleNewFlight">
+          New Flight
+        </button>
+        <button
+          class="w-full py-3 text-gray-400 hover:text-white transition-colors text-sm font-medium flex items-center justify-center gap-2"
+          @click="handleShare"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+          Share Flight Certificate
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useAppStore } from '../stores/useAppStore'
 import { useFlightStore } from '../stores/useFlightStore'
+import { useShare } from '../composables/useShare'
 
 const appStore = useAppStore()
 const flightStore = useFlightStore()
+const { shareElement } = useShare()
+
+const summaryCardRef = ref<HTMLElement>()
 
 const isCompleted = computed(() => flightStore.status === 'landed')
 
-const handleBack = () => {
+const focusedMinutes = computed(() => {
+  return Math.round(flightStore.elapsedSeconds / 60)
+})
+
+const handleNewFlight = () => {
   flightStore.reset()
   appStore.navigateTo('home')
+}
+
+const handleShare = () => {
+  if (summaryCardRef.value) {
+    shareElement(summaryCardRef.value, 'FocusFlight - Flight Certificate')
+  }
 }
 </script>

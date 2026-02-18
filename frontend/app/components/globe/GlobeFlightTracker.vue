@@ -46,14 +46,14 @@ const arcPoints = computed(() =>
   getArcPoints(props.departure.lat, props.departure.lng, props.arrival.lat, props.arrival.lng, 200)
 )
 
-const currentPosition = computed(() => {
+const currentPosition = computed((): [number, number] => {
   const points = arcPoints.value
-  if (points.length === 0) return [0, 0]
+  if (points.length === 0) return [0, 0] as [number, number]
   const idx = Math.min(
     Math.floor((props.progressPercent / 100) * (points.length - 1)),
     points.length - 1
   )
-  return points[idx]
+  return points[idx] as [number, number]
 })
 
 let cesiumRef: ReturnType<typeof useCesium> | null = null

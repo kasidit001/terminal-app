@@ -3,6 +3,7 @@ import cesium from 'vite-plugin-cesium'
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
+  ssr: false,
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt'
@@ -14,6 +15,6 @@ export default defineNuxtConfig({
     viewer: true,
   },
   vite: {
-    plugins: [cesium()],
+    plugins: [cesium() as any],
   },
 })

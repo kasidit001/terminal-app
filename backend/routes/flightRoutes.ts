@@ -37,7 +37,7 @@ router.get('/flights/:id', async (req: Request, res: Response) => {
 // POST /api/flights - Start a flight
 router.post('/flights', async (req: Request, res: Response) => {
   try {
-    const { departureCode, arrivalCode, taskCategory, plannedDuration, seatNumber, distance } = req.body;
+    const { departureCode, arrivalCode, taskCategory, plannedDuration, seatNumber, distance, focusActivity } = req.body;
 
     const flight = await Flight.create({
       departureCode,
@@ -47,6 +47,7 @@ router.post('/flights', async (req: Request, res: Response) => {
       status: FlightStatus.IN_FLIGHT,
       seatNumber,
       distance: distance ? parseFloat(distance) : undefined,
+      focusActivity: focusActivity || undefined,
       startedAt: new Date(),
     });
 

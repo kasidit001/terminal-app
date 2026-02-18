@@ -17,6 +17,7 @@ interface FlightAttributes {
   status: FlightStatus;
   seatNumber?: string;
   distance?: number;
+  focusActivity?: string;
   startedAt?: Date;
   completedAt?: Date;
 
@@ -24,7 +25,7 @@ interface FlightAttributes {
   updatedAt?: Date;
 }
 
-interface FlightCreationAttributes extends Optional<FlightAttributes, 'id' | 'status' | 'seatNumber' | 'distance' | 'startedAt' | 'completedAt' | 'createdAt' | 'updatedAt'> {}
+interface FlightCreationAttributes extends Optional<FlightAttributes, 'id' | 'status' | 'seatNumber' | 'distance' | 'focusActivity' | 'startedAt' | 'completedAt' | 'createdAt' | 'updatedAt'> {}
 
 class Flight extends Model<FlightAttributes, FlightCreationAttributes> implements FlightAttributes {
   public id!: string;
@@ -35,6 +36,7 @@ class Flight extends Model<FlightAttributes, FlightCreationAttributes> implement
   public status!: FlightStatus;
   public seatNumber!: string;
   public distance!: number;
+  public focusActivity!: string;
   public startedAt!: Date;
   public completedAt!: Date;
 
@@ -76,6 +78,10 @@ Flight.init(
     },
     distance: {
       type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    focusActivity: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
     startedAt: {

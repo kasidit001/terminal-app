@@ -1,5 +1,5 @@
 <template>
-  <BottomSheet v-model:open="isOpen">
+  <BottomSheet :open="open" @update:open="$emit('update:open', $event)">
     <div class="space-y-6">
       <!-- Header with master toggle -->
       <div class="flex items-center justify-between">
@@ -16,11 +16,11 @@
           </button>
         </div>
         <button
-          class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 hover:text-white"
+          class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
           @click="$emit('update:open', false)"
         >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M15.53 12.19l-1.61 1.59a3.006 3.006 0 000 4.24c.59.59 1.33.88 2.08.88s1.49-.29 2.08-.88c1.17-1.17 1.17-3.07 0-4.24l-1.61-1.59a.5.5 0 00-.71 0l-.23.24zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
@@ -29,13 +29,24 @@
       <div>
         <p class="label-sm mb-3">White Noise</p>
         <div class="grid grid-cols-2 gap-3">
-          <SoundCard
+          <button
             v-for="track in whiteNoiseTracks"
             :key="track.id"
-            :track="track"
-            @toggle="sounds.toggleTrack(track.id)"
-            @volume="(v: number) => sounds.setTrackVolume(track.id, v)"
-          />
+            class="glass-card p-4 text-left transition-all"
+            :class="track.enabled ? 'border-flight-400/40 bg-flight-400/10' : 'hover:bg-white/10'"
+            @click="sounds.toggleTrack(track.id)"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xl">{{ soundIcons[track.id] || '🔊' }}</span>
+              <span
+                class="text-[10px] font-bold px-2 py-0.5 rounded"
+                :class="track.enabled ? 'bg-flight-400 text-black' : 'bg-white/10 text-gray-500'"
+              >{{ track.enabled ? 'ON' : 'OFF' }}</span>
+            </div>
+            <p class="text-sm font-medium" :class="track.enabled ? 'text-flight-400' : 'text-white'">
+              {{ track.name }}
+            </p>
+          </button>
         </div>
       </div>
 
@@ -43,13 +54,24 @@
       <div>
         <p class="label-sm mb-3">Nature</p>
         <div class="grid grid-cols-2 gap-3">
-          <SoundCard
+          <button
             v-for="track in natureTracks"
             :key="track.id"
-            :track="track"
-            @toggle="sounds.toggleTrack(track.id)"
-            @volume="(v: number) => sounds.setTrackVolume(track.id, v)"
-          />
+            class="glass-card p-4 text-left transition-all"
+            :class="track.enabled ? 'border-flight-400/40 bg-flight-400/10' : 'hover:bg-white/10'"
+            @click="sounds.toggleTrack(track.id)"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xl">{{ soundIcons[track.id] || '🔊' }}</span>
+              <span
+                class="text-[10px] font-bold px-2 py-0.5 rounded"
+                :class="track.enabled ? 'bg-flight-400 text-black' : 'bg-white/10 text-gray-500'"
+              >{{ track.enabled ? 'ON' : 'OFF' }}</span>
+            </div>
+            <p class="text-sm font-medium" :class="track.enabled ? 'text-flight-400' : 'text-white'">
+              {{ track.name }}
+            </p>
+          </button>
         </div>
       </div>
 
@@ -66,7 +88,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { useSounds, SoundTrack } from '../composables/useSounds'
+import type { useSounds } from '../composables/useSounds'
 
 const props = defineProps<{
   open: boolean
@@ -75,54 +97,13 @@ const props = defineProps<{
 
 defineEmits<{ 'update:open': [value: boolean] }>()
 
-const isOpen = computed({
-  get: () => props.open,
-  set: (v) => { /* handled by parent */ }
-})
+const soundIcons: Record<string, string> = {
+  airplane: '✈️',
+  rain: '🌧️',
+  ocean: '🌊',
+  forest: '🌲',
+}
 
 const whiteNoiseTracks = computed(() => props.sounds.tracks.filter(t => t.category === 'white-noise'))
 const natureTracks = computed(() => props.sounds.tracks.filter(t => t.category === 'nature'))
-</script>
-
-<!-- Inline SoundCard sub-component -->
-<script lang="ts">
-import { defineComponent, h } from 'vue'
-import type { PropType } from 'vue'
-
-const SoundCard = defineComponent({
-  name: 'SoundCard',
-  props: {
-    track: { type: Object as PropType<SoundTrack>, required: true },
-  },
-  emits: ['toggle', 'volume'],
-  setup(props, { emit }) {
-    const icons: Record<string, string> = {
-      airplane: '✈️',
-      rain: '🌧️',
-      ocean: '🌊',
-      forest: '🌲',
-    }
-    return () => h('button', {
-      class: [
-        'glass-card p-4 text-left transition-all',
-        props.track.enabled ? 'border-flight-400/40 bg-flight-400/10' : 'hover:bg-white/10'
-      ],
-      onClick: () => emit('toggle'),
-    }, [
-      h('div', { class: 'flex items-center justify-between mb-2' }, [
-        h('span', { class: 'text-xl' }, icons[props.track.id] || '🔊'),
-        h('span', {
-          class: [
-            'text-[10px] font-bold px-2 py-0.5 rounded',
-            props.track.enabled ? 'bg-flight-400 text-black' : 'bg-white/10 text-gray-500'
-          ],
-        }, props.track.enabled ? 'ON' : 'OFF'),
-      ]),
-      h('p', {
-        class: ['text-sm font-medium', props.track.enabled ? 'text-flight-400' : 'text-white']
-      }, props.track.name),
-    ])
-  }
-})
-export { SoundCard }
 </script>
