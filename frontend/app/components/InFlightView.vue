@@ -1,12 +1,10 @@
 <template>
-  <div class="relative w-full h-screen overflow-hidden bg-surface">
+  <div class="relative w-full h-screen overflow-hidden bg-[#060d1a]">
     <!-- Full-screen Globe Tracker -->
     <div class="absolute inset-0">
-      <ClientOnly>
-        <GlobeFlightTracker v-if="flightStore.departureAirport && flightStore.arrivalAirport"
-          :departure="flightStore.departureAirport" :arrival="flightStore.arrivalAirport"
-          :progress-percent="flightStore.progressPercent" />
-      </ClientOnly>
+      <GlobeFlightTracker v-if="flightStore.departureAirport && flightStore.arrivalAirport"
+        :departure="flightStore.departureAirport" :arrival="flightStore.arrivalAirport"
+        :progress-percent="flightStore.progressPercent" />
     </div>
 
     <!-- Top controls -->

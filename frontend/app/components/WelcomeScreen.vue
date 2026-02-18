@@ -1,15 +1,12 @@
 <template>
-  <div class="relative w-full h-screen overflow-hidden">
-    <!-- Background Globe -->
-    <div class="absolute inset-0 opacity-40">
-      <ClientOnly>
-        <GlobeCesiumGlobe :interactive="false" :show-atmosphere="true" :initial-height="25000000"
-          :auto-rotate-speed="0.5" />
-      </ClientOnly>
+  <div class="relative w-full h-screen overflow-hidden bg-[#060d1a]">
+    <!-- Background SVG Globe -->
+    <div class="absolute inset-0 flex items-center justify-center scale-110">
+      <GlobeSvgGlobe :show-flight="false" :auto-rotate="true" />
     </div>
 
     <!-- Gradient overlay -->
-    <div class="absolute inset-0 bg-gradient-to-b from-surface/80 via-surface/30 to-surface/95 z-10" />
+    <div class="absolute inset-0 bg-gradient-to-b from-[#060d1a]/80 via-[#060d1a]/30 to-[#060d1a]/95 z-10" />
 
     <!-- Content -->
     <div class="relative z-20 flex flex-col items-center justify-between h-full px-6 py-12">
@@ -19,7 +16,7 @@
         <!-- Logo icon -->
         <div class="mb-5">
           <div
-            class="w-18 h-18 w-[72px] h-[72px] rounded-2xl bg-flight-400/10 border border-flight-400/30 flex items-center justify-center shadow-lg shadow-flight-400/10">
+            class="w-[72px] h-[72px] rounded-2xl bg-flight-400/10 border border-flight-400/30 flex items-center justify-center shadow-lg shadow-flight-400/10">
             <svg class="w-9 h-9 text-flight-400" viewBox="0 0 24 24" fill="currentColor">
               <path
                 d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
@@ -78,7 +75,7 @@ const features = [
   {
     icon: '🌍',
     label: 'Fly the World',
-    desc: 'Real airports, real routes — visualized on a live 3D Cesium globe',
+    desc: 'Real airports, real routes — visualized on a beautiful interactive globe',
     bg: 'bg-flight-400/10',
   },
   {

@@ -1,16 +1,20 @@
 <template>
-  <div class="relative w-full h-screen overflow-hidden">
-    <!-- Full-screen globe -->
-    <div class="absolute inset-0">
-      <ClientOnly>
-        <GlobeCesiumGlobe ref="globeRef" :interactive="true" :show-atmosphere="true"
-          :initial-lat="appStore.homeAirport!.lat" :initial-lng="appStore.homeAirport!.lng" :initial-height="8000000"
-          @ready="onGlobeReady" />
-      </ClientOnly>
+  <div class="relative w-full h-screen overflow-hidden bg-[#060d1a]">
+    <!-- Full-screen SVG globe -->
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="w-full h-full max-w-none">
+        <GlobeSvgGlobe :show-flight="!!selectedArrival" :departure="homeCoords" :arrival="arrivalCoords"
+          :dep-label="appStore.homeAirport!.iata" :arr-label="selectedArrival?.iata ?? ''" :progress="0"
+          :auto-rotate="true" />
+      </div>
     </div>
 
+    <!-- Radial vignette overlay -->
+    <div class="absolute inset-0 pointer-events-none"
+      style="background: radial-gradient(ellipse at center, transparent 30%, rgba(6,13,26,0.7) 100%)" />
+
     <!-- Top bar -->
-    <div class="absolute top-0 inset-x-0 z-[1000] p-6 flex items-center justify-between">
+    <div class="absolute top-0 inset-x-0 z-[100] p-6 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-lg bg-flight-400/10 border border-flight-400/30 flex items-center justify-center">
           <svg class="w-4 h-4 text-flight-400" viewBox="0 0 24 24" fill="currentColor">
@@ -29,23 +33,24 @@
     </div>
 
     <!-- Bottom action area -->
-    <div class="absolute bottom-0 inset-x-0 z-[1000] p-6 pb-10 space-y-4">
+    <div class="absolute bottom-0 inset-x-0 z-[100] p-6 pb-10 space-y-4">
       <!-- Stats strip (shown after first flight) -->
-      <div v-if="statsStore.totalFlights > 0" class="w-full max-w-md mx-auto flex items-center justify-center gap-4">
+      <div v-if="statsStore.totalFlights > 0"
+        class="w-full max-w-md mx-auto flex items-center justify-center gap-3 flex-wrap">
         <div
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10">
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
           <span class="text-sm">🔥</span>
           <span class="text-xs font-mono font-bold text-flight-400">{{ statsStore.currentStreak }}</span>
           <span class="text-xs text-gray-500">day streak</span>
         </div>
         <div
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10">
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
           <span class="text-sm">✈️</span>
           <span class="text-xs font-mono font-bold text-white">{{ statsStore.totalFlights }}</span>
           <span class="text-xs text-gray-500">flights</span>
         </div>
         <div
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10">
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
           <span class="text-sm">{{ statsStore.focusLevel.icon }}</span>
           <span class="text-xs font-semibold" :class="statsStore.focusLevel.color">{{ statsStore.focusLevel.label
             }}</span>
@@ -140,7 +145,6 @@ import { useFlightStore } from '../stores/useFlightStore'
 import { useStatsStore } from '../stores/useStatsStore'
 import { useAirports } from '../composables/useAirports'
 import { useGreatCircle } from '../composables/useGreatCircle'
-import type { useCesium } from '../composables/useCesium'
 
 const appStore = useAppStore()
 const flightStore = useFlightStore()
@@ -148,26 +152,23 @@ const statsStore = useStatsStore()
 const arrivalSearch = useAirports()
 const { getDistance } = useGreatCircle()
 
-const globeRef = ref()
 const showNewFlight = ref(false)
 const selectedArrival = ref<Airport | null>(null)
 const duration = ref(25)
 
 const presetDurations = [15, 25, 45, 60]
 
+const homeCoords = computed<[number, number]>(() =>
+  [appStore.homeAirport?.lat ?? 0, appStore.homeAirport?.lng ?? 0]
+)
+
+const arrivalCoords = computed<[number, number]>(() =>
+  [selectedArrival.value?.lat ?? 0, selectedArrival.value?.lng ?? 0]
+)
+
 const canBoard = computed(() =>
   selectedArrival.value && duration.value > 0
 )
-
-const onGlobeReady = (cesium: ReturnType<typeof useCesium>) => {
-  if (appStore.homeAirport) {
-    cesium.addAirportMarker({
-      iata: appStore.homeAirport.iata,
-      lat: appStore.homeAirport.lat,
-      lng: appStore.homeAirport.lng,
-    })
-  }
-}
 
 const handleArrivalSelect = (airport: Airport) => {
   selectedArrival.value = airport
