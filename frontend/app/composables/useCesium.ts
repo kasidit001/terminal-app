@@ -37,8 +37,6 @@ export function useCesium(options: CesiumGlobeOptions) {
       timeline: false,
       navigationHelpButton: false,
       creditContainer,
-      requestRenderMode: !options.interactive,
-      maximumRenderTimeChange: options.interactive ? undefined : Infinity,
       // Bundled imagery — avoids needing a Cesium Ion token
       baseLayer: naturalEarthLayer,
       // Flat terrain — avoids needing a Cesium Ion token for world terrain
@@ -150,10 +148,13 @@ export function useCesium(options: CesiumGlobeOptions) {
 
   const autoRotate = (speed: number = 0.5) => {
     if (!viewer.value) return null
-    const removeListener = viewer.value.clock.onTick.addEventListener(() => {
-      if (viewer.value) {
-        viewer.value.scene.camera.rotateRight(Cesium.Math.toRadians(speed * 0.016))
-      }
+    let lastTime = Date.now()
+    const removeListener = viewer.value.scene.preUpdate.addEventListener(() => {
+      if (!viewer.value) return
+      const now = Date.now()
+      const delta = (now - lastTime) / 1000
+      lastTime = now
+      viewer.value.scene.camera.rotateRight(Cesium.Math.toRadians(speed * delta))
     })
     return removeListener
   }

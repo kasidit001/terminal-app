@@ -2,7 +2,6 @@
   <div class="w-full h-full relative">
     <ClientOnly>
       <CesiumGlobe
-        ref="globeRef"
         :interactive="true"
         :show-atmosphere="true"
         :initial-lat="midpoint[0]"
@@ -15,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { computed, watch } from 'vue'
 import * as Cesium from 'cesium'
 import type { Airport } from '../../stores/useAppStore'
 import { useGreatCircle } from '../../composables/useGreatCircle'
