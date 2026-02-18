@@ -18,11 +18,14 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useAppStore } from './stores/useAppStore'
+import { useStatsStore } from './stores/useStatsStore'
 
 const appStore = useAppStore()
+const statsStore = useStatsStore()
 
 onMounted(() => {
   appStore.initialize()
+  statsStore.initialize()
 })
 </script>
 
@@ -31,10 +34,12 @@ onMounted(() => {
 .view-fade-leave-active {
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
+
 .view-fade-enter-from {
   opacity: 0;
   transform: translateY(10px);
 }
+
 .view-fade-leave-to {
   opacity: 0;
   transform: translateY(-10px);
