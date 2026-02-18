@@ -3,7 +3,7 @@
     <!-- Background Globe -->
     <div class="absolute inset-0 opacity-40">
       <ClientOnly>
-        <CesiumGlobe
+        <GlobeCesiumGlobe
           :interactive="false"
           :show-atmosphere="true"
           :initial-height="25000000"

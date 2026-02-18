@@ -1,15 +1,8 @@
 <template>
   <div class="w-full h-full">
     <ClientOnly>
-      <CesiumGlobe
-        ref="globeRef"
-        :interactive="false"
-        :show-atmosphere="false"
-        :initial-lat="midpoint[0]"
-        :initial-lng="midpoint[1]"
-        :initial-height="computedHeight"
-        @ready="onGlobeReady"
-      />
+      <GlobeCesiumGlobe ref="globeRef" :interactive="false" :show-atmosphere="false" :initial-lat="midpoint[0]"
+        :initial-lng="midpoint[1]" :initial-height="computedHeight" @ready="onGlobeReady" />
     </ClientOnly>
   </div>
 </template>
