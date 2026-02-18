@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full h-screen overflow-hidden bg-[#060d1a]">
+  <div class="relative w-full h-full overflow-hidden bg-[#060d1a]">
     <!-- Full-screen Globe Tracker -->
     <div class="absolute inset-0">
       <GlobeFlightTracker v-if="flightStore.departureAirport && flightStore.arrivalAirport"

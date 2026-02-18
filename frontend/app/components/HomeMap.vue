@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full h-screen overflow-hidden bg-[#060d1a]">
+  <div class="relative w-full h-full overflow-hidden bg-[#060d1a]">
     <!-- Full-screen SVG globe -->
     <div class="absolute inset-0 flex items-center justify-center">
       <div class="w-full h-full max-w-none">
@@ -53,7 +53,7 @@
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
           <span class="text-sm">{{ statsStore.focusLevel.icon }}</span>
           <span class="text-xs font-semibold" :class="statsStore.focusLevel.color">{{ statsStore.focusLevel.label
-            }}</span>
+          }}</span>
         </div>
       </div>
       <button class="w-full max-w-md mx-auto block btn-primary" @click="showNewFlight = true">

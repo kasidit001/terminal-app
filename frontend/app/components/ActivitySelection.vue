@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-surface flex flex-col items-center justify-center px-6 py-10">
+  <div class="h-full bg-surface flex flex-col items-center justify-center px-6 py-10 overflow-y-auto">
     <!-- Header -->
     <div class="mb-1 text-center">
       <p class="label-sm">

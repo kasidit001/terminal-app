@@ -1,7 +1,7 @@
 <template>
-  <div class="relative w-full h-screen overflow-hidden bg-[#060d1a]">
-    <!-- Background SVG Globe -->
-    <div class="absolute inset-0 flex items-center justify-center scale-110">
+  <div class="relative w-full h-full overflow-hidden bg-[#060d1a]">
+    <!-- Background SVG Globe (mobile only — desktop shell provides its own) -->
+    <div class="absolute inset-0 flex items-center justify-center scale-110 welcome-globe">
       <GlobeSvgGlobe :show-flight="false" :auto-rotate="true" />
     </div>
 
@@ -86,3 +86,12 @@ const features = [
   },
 ]
 </script>
+
+<style scoped>
+/* Hide the internal globe on tablet/desktop — the shell provides its own */
+@media (min-width: 640px) {
+  .welcome-globe {
+    display: none;
+  }
+}
+</style>
