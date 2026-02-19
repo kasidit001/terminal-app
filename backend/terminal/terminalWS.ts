@@ -1,132 +1,188 @@
-import { WebSocketServer, WebSocket } from 'ws';
-import type { IncomingMessage } from 'http';
-import type { Server } from 'http';
-import { TerminalSession } from './TerminalSession.js';
-import crypto from 'crypto';
+import type { Server } from 'bun';
 
 // ────────────────────────────────────────────────────────────────────────────
-//  Message envelope types (shared protocol with the frontend)
+//  Security: blocked command denylist
 // ────────────────────────────────────────────────────────────────────────────
-interface ClientMessage {
-    type: 'input' | 'resize' | 'ping';
-    data?: string;
-    cols?: number;
-    rows?: number;
-}
+const BLOCKED: RegExp[] = [
+    /rm\s+-rf\s+\/(?!\w)/,
+    /:\(\)\{.*\};:/,
+    /mkfs\b/,
+    /dd\s+.*of=\/dev\//,
+];
 
-interface ServerMessage {
-    type: 'output' | 'exit' | 'error' | 'pong' | 'ready';
-    data?: string;
-    code?: number;
-}
-
-function send(ws: WebSocket, msg: ServerMessage): void {
-    if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(msg));
-    }
+function isDangerous(input: string): boolean {
+    return BLOCKED.some(re => re.test(input));
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-//  Simple token-based auth
-//  In production: validate a real JWT / session cookie here.
+//  Auth
 // ────────────────────────────────────────────────────────────────────────────
-const ADMIN_TOKENS = new Set<string>(
-    (process.env.TERMINAL_TOKENS || 'dev-secret-token').split(',').map(t => t.trim())
+const VALID_TOKENS = new Set<string>(
+    (process.env.TERMINAL_TOKENS ?? 'dev-secret-token').split(',').map(t => t.trim())
 );
 
-function isAuthenticated(req: IncomingMessage): boolean {
-    const url = new URL(req.url ?? '', `http://${req.headers.host}`);
+function isAuthenticated(req: Request): boolean {
+    const url = new URL(req.url);
     const token = url.searchParams.get('token')
-        ?? req.headers['x-terminal-token'] as string | undefined;
-    if (!token) return false;
-    return ADMIN_TOKENS.has(token);
+        ?? req.headers.get('x-terminal-token');
+    return token != null && VALID_TOKENS.has(token);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-//  WebSocket server
+//  Session store
 // ────────────────────────────────────────────────────────────────────────────
-const sessions = new Map<string, TerminalSession>();
+interface Session {
+    id: string;
+    proc: ReturnType<typeof Bun.spawn>;
+    ws: ServerWebSocket<unknown>;
+    idleTimer: ReturnType<typeof setTimeout>;
+}
 
-export function attachTerminalWS(httpServer: Server): void {
-    const wss = new WebSocketServer({
-        server: httpServer,
-        path: '/ws/terminal',
-        // Verify auth BEFORE the WS handshake completes (401 before TCP upgrade)
-        verifyClient({ req }, callback) {
-            if (isAuthenticated(req)) {
-                callback(true);
-            } else {
-                console.warn('[Terminal] WS rejected — bad/missing token');
-                callback(false, 401, 'Unauthorized');
-            }
-        },
-    });
+const IDLE_MS = 10 * 60 * 1000; // 10 min
+const sessions = new Map<string, Session>();
 
-    wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+function clearSession(id: string) {
+    const s = sessions.get(id);
+    if (!s) return;
+    clearTimeout(s.idleTimer);
+    try { s.proc.kill(); } catch { }
+    sessions.delete(id);
+    console.log(`[Terminal] Session ${id} removed`);
+}
+
+function resetIdle(s: Session) {
+    clearTimeout(s.idleTimer);
+    s.idleTimer = setTimeout(() => {
+        s.ws.send(JSON.stringify({
+            type: 'output',
+            data: '\r\n\x1b[33m[Session timed out]\x1b[0m\r\n',
+        }));
+        clearSession(s.id);
+        s.ws.close();
+    }, IDLE_MS);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  Bun WebSocket handler (to be merged into Bun.serve config)
+// ────────────────────────────────────────────────────────────────────────────
+type ServerWebSocket<T> = import('bun').ServerWebSocket<T>;
+
+export const terminalWsHandler = {
+    // Called when the HTTP→WS upgrade succeeds
+    open(ws: ServerWebSocket<{ sessionId: string }>) {
         const sessionId = crypto.randomUUID();
+        (ws.data as any).sessionId = sessionId;
 
-        // Default to 80×24; frontend will send a resize Right After connecting.
-        const session = new TerminalSession(sessionId, 80, 24);
+        const shell = process.env.SHELL ?? '/bin/zsh';
+        const HOME = process.env.HOME ?? '/tmp';
+
+        // Bun.spawn returns a process; we stream stdin/stdout manually
+        const proc = Bun.spawn([shell], {
+            cwd: HOME,
+            env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' },
+            stdin: 'pipe',
+            stdout: 'pipe',
+            stderr: 'pipe',
+        });
+
+        const session: Session = {
+            id: sessionId,
+            proc,
+            ws: ws as ServerWebSocket<unknown>,
+            idleTimer: setTimeout(() => { }, 0),
+        };
         sessions.set(sessionId, session);
+        resetIdle(session);
 
-        console.log(`[Terminal] Client connected → session ${sessionId}`);
+        console.log(`[Terminal] Session ${sessionId} opened`);
 
-        // ── PTY → WebSocket ──────────────────────────────────────────────────────
-        session.on('data', (data: string) => send(ws, { type: 'output', data }));
-        session.on('exit', (code: number) => {
-            send(ws, { type: 'exit', code });
-            ws.close();
-        });
+        // Send "ready" message immediately
+        ws.send(JSON.stringify({ type: 'ready', data: sessionId }));
 
-        // Notify the frontend that the PTY is ready
-        send(ws, { type: 'ready', data: sessionId });
-
-        // ── WebSocket → PTY ──────────────────────────────────────────────────────
-        ws.on('message', (raw) => {
-            let msg: ClientMessage;
+        // Stream stdout → WebSocket
+        async function pipeOutput(stream: ReadableStream<Uint8Array> | null, label: string) {
+            if (!stream) return;
+            const reader = stream.getReader();
+            const decoder = new TextDecoder();
             try {
-                msg = JSON.parse(raw.toString());
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const text = decoder.decode(value);
+                    if (ws.readyState === 1 /* OPEN */) {
+                        ws.send(JSON.stringify({ type: 'output', data: text }));
+                    }
+                    resetIdle(session);
+                }
             } catch {
-                return; // drop malformed frames
+                // stream closed
+            } finally {
+                if (ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'exit', code: 0 }));
+                    ws.close();
+                }
             }
+        }
 
-            switch (msg.type) {
-                case 'input':
-                    if (typeof msg.data === 'string') {
-                        session.write(msg.data);
-                    }
-                    break;
+        pipeOutput(proc.stdout, 'stdout');
+        pipeOutput(proc.stderr, 'stderr');
+    },
 
-                case 'resize':
-                    if (typeof msg.cols === 'number' && typeof msg.rows === 'number') {
-                        session.resize(msg.cols, msg.rows);
-                    }
-                    break;
+    message(ws: ServerWebSocket<{ sessionId: string }>, raw: string | Buffer) {
+        const sessionId = (ws.data as any).sessionId as string;
+        const session = sessions.get(sessionId);
+        if (!session) return;
 
-                case 'ping':
-                    send(ws, { type: 'pong' });
-                    break;
+        let msg: { type: string; data?: string; cols?: number; rows?: number };
+        try { msg = JSON.parse(raw.toString()); } catch { return; }
+
+        if (msg.type === 'input' && typeof msg.data === 'string') {
+            if (isDangerous(msg.data)) {
+                ws.send(JSON.stringify({
+                    type: 'output',
+                    data: '\r\n\x1b[31m[BLOCKED] Dangerous command rejected.\x1b[0m\r\n',
+                }));
+                return;
             }
-        });
+            resetIdle(session);
+            session.proc.stdin?.write(msg.data);
+        } else if (msg.type === 'ping') {
+            ws.send(JSON.stringify({ type: 'pong' }));
+        }
+        // Note: resize (cols/rows) is a no-op without node-pty; full PTY resize
+        // requires `bun add node-pty` — the shell still works, just no SIGWINCH.
+    },
 
-        // ── Cleanup ───────────────────────────────────────────────────────────────
-        ws.on('close', () => {
-            session.destroy();
-            sessions.delete(sessionId);
-            console.log(`[Terminal] Session ${sessionId} cleaned up`);
-        });
+    close(ws: ServerWebSocket<{ sessionId: string }>) {
+        const sessionId = (ws.data as any).sessionId as string;
+        clearSession(sessionId);
+        console.log(`[Terminal] Session ${sessionId} closed`);
+    },
 
-        ws.on('error', (err) => {
-            console.error(`[Terminal] WS error on ${sessionId}:`, err.message);
-            session.destroy();
-            sessions.delete(sessionId);
-        });
-    });
+    error(ws: ServerWebSocket<{ sessionId: string }>, error: Error) {
+        console.error('[Terminal] WS error:', error.message);
+        const sessionId = (ws.data as any).sessionId as string;
+        clearSession(sessionId);
+    },
+};
 
-    console.log('[Terminal] WebSocket server attached at /ws/terminal');
+export function activeSessionCount() {
+    return sessions.size;
 }
 
-/** Returns current active session count (for health checks). */
-export function activeSessionCount(): number {
-    return sessions.size;
+/**
+ * Returns a Response that upgrades the HTTP request to a WebSocket,
+ * or a 401 if not authenticated.
+ */
+export function handleTerminalUpgrade(req: Request, server: Server): Response | undefined {
+    if (!isAuthenticated(req)) {
+        console.warn('[Terminal] Rejected WS — bad token');
+        return new Response('Unauthorized', { status: 401 });
+    }
+    const upgraded = server.upgrade(req, { data: { sessionId: '' } });
+    if (!upgraded) {
+        return new Response('WebSocket upgrade failed', { status: 500 });
+    }
+    // Return undefined means Bun will handle the upgrade response
+    return undefined;
 }

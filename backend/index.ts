@@ -1,46 +1,76 @@
+import sequelize from './config/database.js';
+import Flight from './models/Flight.js'; // register model
+import flightRoutes from './routes/flightRoutes.js';
+import { terminalWsHandler, handleTerminalUpgrade, activeSessionCount } from './terminal/terminalWS.js';
+
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
-import sequelize from './config/database.js';
-import flightRoutes from './routes/flightRoutes.js';
-import Flight from './models/Flight.js';
-import { attachTerminalWS, activeSessionCount } from './terminal/terminalWS.js';
 
+const PORT = Number(process.env.PORT ?? 4000);
+const EXPR_PORT = PORT + 1; // Express listens on 4001 internally
+
+// ── Express app (REST API) ─────────────────────────────────────────────────
 const app = express();
-const PORT = process.env.PORT || 4000;
-
-app.use(cors());
+app.use(cors({ origin: '*' }));
 app.use(express.json());
-
-// ── REST API routes ──────────────────────────────────────────────────────────
 app.use('/api', flightRoutes);
-
-// ── Health endpoint (also shows active terminal sessions) ───────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', terminalSessions: activeSessionCount() });
 });
 
-// ── Create HTTP server (needed so WS and HTTP share the same port) ──────────
-const server = http.createServer(app);
-
-// ── Attach WebSocket terminal server ────────────────────────────────────────
-attachTerminalWS(server);
-
-// ── Sync database and start ──────────────────────────────────────────────────
+// ── Boot ───────────────────────────────────────────────────────────────────
 (async () => {
   try {
     await sequelize.authenticate();
-    console.log('Database connection established.');
-
+    console.log('[DB] Connection established.');
     await sequelize.sync({ force: false });
-    console.log('Database synchronized.');
+    console.log('[DB] Synchronized.');
 
-    server.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
-      console.log(`WebSocket terminal at ws://localhost:${PORT}/ws/terminal`);
+    // 1. Start Express on internal port (REST only)
+    await new Promise<void>((resolve) =>
+      http.createServer(app).listen(EXPR_PORT, () => {
+        console.log(`[Express] REST API on http://localhost:${EXPR_PORT}`);
+        resolve();
+      })
+    );
+
+    // 2. Start Bun.serve on the public port (WS + proxy REST to Express)
+    const server = Bun.serve({
+      port: PORT,
+
+      async fetch(req, server) {
+        const url = new URL(req.url);
+
+        // WebSocket upgrade
+        if (url.pathname === '/ws/terminal') {
+          return handleTerminalUpgrade(req, server)
+            ?? new Response(null, { status: 101 });
+        }
+
+        // Proxy everything else to Express
+        const proxied = new Request(
+          `http://localhost:${EXPR_PORT}${url.pathname}${url.search}`,
+          {
+            method: req.method,
+            headers: req.headers,
+            body: req.body,
+          }
+        );
+        try {
+          return await fetch(proxied);
+        } catch {
+          return new Response('Bad Gateway', { status: 502 });
+        }
+      },
+
+      websocket: terminalWsHandler,
     });
-  } catch (error) {
-    console.error('Unable to start server:', error);
+
+    console.log(`[Bun]  Public server on http://localhost:${server.port}`);
+    console.log(`[Bun]  Terminal WebSocket at ws://localhost:${server.port}/ws/terminal`);
+  } catch (err) {
+    console.error('Startup failed:', err);
     process.exit(1);
   }
 })();
