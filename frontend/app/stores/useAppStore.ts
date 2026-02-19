@@ -20,6 +20,7 @@ export type AppView =
   | 'in-flight'
   | 'landed'
   | 'logbook'
+  | 'terminal'
 
 export const useAppStore = defineStore('app', () => {
   const currentView = ref<AppView>('welcome')

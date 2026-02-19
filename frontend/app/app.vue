@@ -19,6 +19,8 @@
         <InFlightView v-else-if="appStore.currentView === 'in-flight'" key="in-flight" />
         <LandedSummary v-else-if="appStore.currentView === 'landed'" key="landed" />
         <FlightLogbook v-else-if="appStore.currentView === 'logbook'" key="logbook" />
+        <WebTerminal v-else-if="appStore.currentView === 'terminal'" key="terminal"
+          @close="appStore.navigateTo('home')" />
       </Transition>
     </div>
   </div>
