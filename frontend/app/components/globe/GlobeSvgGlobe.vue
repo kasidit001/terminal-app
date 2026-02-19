@@ -130,7 +130,7 @@
                 </g>
 
                 <!-- Land fill -->
-                <g fill="url(#landGrad)" stroke="url(#landBorder)" stroke-width="0.8" opacity="0.95">
+                <g fill="#22c55e" stroke="#4ade80" stroke-width="0.9" opacity="0.92">
                     <path :d="northAmericaPath" />
                     <path :d="southAmericaPath" />
                     <path :d="europePath" />
