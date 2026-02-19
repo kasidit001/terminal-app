@@ -4,25 +4,27 @@
         <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
         <div class="flex items-center justify-between px-4 py-2.5 bg-[#161b22] border-b border-white/8 shrink-0">
             <div class="flex items-center gap-2.5">
-                <!-- Traffic lights -->
+                <!-- macOS-style traffic lights -->
                 <div class="flex items-center gap-1.5">
                     <div class="w-3 h-3 rounded-full bg-[#ff5f57]" />
                     <div class="w-3 h-3 rounded-full bg-[#febc2e]" />
                     <div class="w-3 h-3 rounded-full bg-[#28c840]" />
                 </div>
-                <span class="text-gray-400 text-xs font-mono ml-1">bash — FocusFlight Terminal</span>
+                <span class="text-gray-400 text-xs font-mono ml-1">zsh — FocusFlight Terminal</span>
             </div>
 
             <div class="flex items-center gap-3">
-                <!-- Status indicator -->
+                <!-- Connection status pill -->
                 <div class="flex items-center gap-1.5">
-                    <div class="w-1.5 h-1.5 rounded-full transition-colors" :class="statusColor" />
-                    <span class="text-[10px] font-mono" :class="statusTextColor">{{ statusLabel }}</span>
+                    <div class="w-1.5 h-1.5 rounded-full transition-colors duration-300" :class="statusDotClass" />
+                    <span class="text-[10px] font-mono transition-colors duration-300" :class="statusTextClass">
+                        {{ statusLabel }}
+                    </span>
                 </div>
 
-                <!-- Close button -->
-                <button class="text-gray-600 hover:text-gray-300 transition-colors" @click="$emit('close')"
-                    title="Close terminal">
+                <!-- Close -->
+                <button class="text-gray-600 hover:text-gray-300 transition-colors" title="Close terminal"
+                    @click="$emit('close')">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M6 18L18 6M6 6l12 12" />
@@ -31,8 +33,8 @@
             </div>
         </div>
 
-        <!-- ── Terminal viewport ────────────────────────────────────────────────── -->
-        <div ref="terminalEl" class="flex-1 p-1 overflow-hidden" />
+        <!-- ── xterm.js mount point ─────────────────────────────────────────────── -->
+        <div ref="terminalEl" class="flex-1 p-1 min-h-0" />
 
         <!-- ── Error overlay ────────────────────────────────────────────────────── -->
         <Transition name="fade">
@@ -46,8 +48,8 @@
                         </svg>
                     </div>
                     <p class="text-white font-semibold text-sm">Connection Error</p>
-                    <p class="text-gray-400 text-xs">{{ errorMsg }}</p>
-                    <button class="btn-primary text-sm py-2 px-4" @click="reconnect">
+                    <p class="text-gray-400 text-xs leading-relaxed">{{ errorMsg }}</p>
+                    <button class="btn-primary text-sm py-2 px-6 mt-1" @click="reconnect">
                         Reconnect
                     </button>
                 </div>
@@ -58,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
@@ -66,154 +68,132 @@ import '@xterm/xterm/css/xterm.css'
 
 // ── Props / Emits ─────────────────────────────────────────────────────────────
 interface Props {
-    /** Authentication token sent to the backend on WS handshake. */
+    /** Token sent to backend as ?token= on WS upgrade */
     authToken?: string
-    /** WS endpoint base (default: auto-detected from window.location). */
+    /** Override the WS base URL (auto-detected by default) */
     wsUrl?: string
 }
-
 const props = withDefaults(defineProps<Props>(), {
     authToken: 'dev-secret-token',
     wsUrl: '',
 })
-
 defineEmits<{ (e: 'close'): void }>()
 
-// ── Refs ──────────────────────────────────────────────────────────────────────
+// ── Reactive state ────────────────────────────────────────────────────────────
 const terminalEl = ref<HTMLDivElement | null>(null)
 const errorMsg = ref<string | null>(null)
+type Status = 'connecting' | 'connected' | 'disconnected' | 'error'
+const status = ref<Status>('connecting')
 
-type ConnStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
-const connStatus = ref<ConnStatus>('connecting')
-
-// ── Computed status styles ────────────────────────────────────────────────────
-const statusColor = computed(() => ({
-    'bg-yellow-400 animate-pulse': connStatus.value === 'connecting',
-    'bg-emerald-400': connStatus.value === 'connected',
-    'bg-gray-500': connStatus.value === 'disconnected',
-    'bg-red-400': connStatus.value === 'error',
+// ── Status visuals ────────────────────────────────────────────────────────────
+const statusDotClass = computed(() => ({
+    'bg-yellow-400 animate-pulse': status.value === 'connecting',
+    'bg-emerald-400': status.value === 'connected',
+    'bg-gray-500': status.value === 'disconnected',
+    'bg-red-400': status.value === 'error',
 }))
-
-const statusTextColor = computed(() => ({
-    'text-yellow-400': connStatus.value === 'connecting',
-    'text-emerald-400': connStatus.value === 'connected',
-    'text-gray-500': connStatus.value === 'disconnected',
-    'text-red-400': connStatus.value === 'error',
+const statusTextClass = computed(() => ({
+    'text-yellow-400': status.value === 'connecting',
+    'text-emerald-400': status.value === 'connected',
+    'text-gray-500': status.value === 'disconnected',
+    'text-red-400': status.value === 'error',
 }))
-
 const statusLabel = computed(() => ({
     connecting: 'Connecting…',
     connected: 'Connected',
     disconnected: 'Disconnected',
     error: 'Error',
-}[connStatus.value]))
+}[status.value]))
 
-// ── Core objects ──────────────────────────────────────────────────────────────
+// ── Internal handles ──────────────────────────────────────────────────────────
 let term: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let ws: WebSocket | null = null
 let pingInterval: ReturnType<typeof setInterval> | null = null
 let resizeObserver: ResizeObserver | null = null
 
-// ── Helper: build WS URL ──────────────────────────────────────────────────────
-function buildWsUrl(): string {
-    if (props.wsUrl) {
-        return `${props.wsUrl}?token=${encodeURIComponent(props.authToken)}`
-    }
-    // Auto-detect: same host, port 4000 (the backend)
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${proto}//localhost:4000/ws/terminal?token=${encodeURIComponent(props.authToken)}`
-}
-
-// ── Message types (shared with backend) ──────────────────────────────────────
+// ── Message protocol ──────────────────────────────────────────────────────────
 interface ServerMessage {
     type: 'output' | 'exit' | 'error' | 'pong' | 'ready'
     data?: string
     code?: number
 }
-
-// ── Connect ───────────────────────────────────────────────────────────────────
-function connect(): void {
-    connStatus.value = 'connecting'
-    errorMsg.value = null
-
-    ws = new WebSocket(buildWsUrl())
-
-    ws.onopen = () => {
-        connStatus.value = 'connected'
-        sendResize()   // immediately tell backend current terminal size
-
-        // Keep-alive ping every 30 s
-        pingInterval = setInterval(() => {
-            sendMsg({ type: 'ping' })
-        }, 30_000)
-    }
-
-    ws.onmessage = (event: MessageEvent) => {
-        let msg: ServerMessage
-        try { msg = JSON.parse(event.data) } catch { return }
-
-        switch (msg.type) {
-            case 'output':
-                if (msg.data) term?.write(msg.data)
-                break
-            case 'ready':
-                // PTY is live — print a welcome banner
-                term?.write('\x1b[1;36m┌─ FocusFlight Web Terminal ─────────────────────────┐\x1b[0m\r\n')
-                term?.write('\x1b[1;36m│\x1b[0m Session ID: \x1b[33m' + (msg.data ?? '?') + '\x1b[0m\r\n')
-                term?.write('\x1b[1;36m│\x1b[0m Type \x1b[32mexit\x1b[0m to close the session.\r\n')
-                term?.write('\x1b[1;36m└────────────────────────────────────────────────────┘\x1b[0m\r\n')
-                break
-            case 'exit':
-                term?.write(`\r\n\x1b[33mShell exited (code ${msg.code ?? 0})\x1b[0m\r\n`)
-                connStatus.value = 'disconnected'
-                break
-            case 'error':
-                errorMsg.value = msg.data ?? 'Unknown server error'
-                connStatus.value = 'error'
-                break
-            case 'pong':
-                // heartbeat acknowledged — no-op
-                break
-        }
-    }
-
-    ws.onclose = (ev) => {
-        clearInterval(pingInterval!)
-        if (connStatus.value !== 'disconnected') {
-            connStatus.value = ev.code === 1006 ? 'error' : 'disconnected'
-            if (ev.code === 1006) {
-                errorMsg.value = 'Connection lost unexpectedly. Check the backend is running.'
-            }
-        }
-    }
-
-    ws.onerror = () => {
-        connStatus.value = 'error'
-        errorMsg.value = 'WebSocket connection failed. Is the backend running on port 4000?'
-    }
-}
-
-// ── Send helpers ──────────────────────────────────────────────────────────────
 type ClientMessage =
     | { type: 'input'; data: string }
     | { type: 'resize'; cols: number; rows: number }
     | { type: 'ping' }
 
-function sendMsg(msg: ClientMessage): void {
-    if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(msg))
-    }
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function buildWsUrl() {
+    const base = props.wsUrl
+        || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hostname}:4000`
+    return `${base}/ws/terminal?token=${encodeURIComponent(props.authToken)}`
 }
 
-function sendResize(): void {
+function sendMsg(msg: ClientMessage) {
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg))
+}
+
+function sendResize() {
     if (!term) return
     sendMsg({ type: 'resize', cols: term.cols, rows: term.rows })
 }
 
-// ── Reconnect (user action) ───────────────────────────────────────────────────
-function reconnect(): void {
-    ws?.close()
+// ── WebSocket connect ─────────────────────────────────────────────────────────
+function connect() {
+    status.value = 'connecting'
+    errorMsg.value = null
+
+    ws = new WebSocket(buildWsUrl())
+
+    ws.onopen = () => {
+        status.value = 'connected'
+        sendResize()
+        pingInterval = setInterval(() => sendMsg({ type: 'ping' }), 25_000)
+    }
+
+    ws.onmessage = ({ data: raw }: MessageEvent) => {
+        let msg: ServerMessage
+        try { msg = JSON.parse(raw) } catch { return }
+
+        if (msg.type === 'output' && msg.data) {
+            term?.write(msg.data)
+        } else if (msg.type === 'ready') {
+            term?.write(
+                '\x1b[1;36m┌─ FocusFlight Web Terminal ────────────────────────────┐\x1b[0m\r\n' +
+                '\x1b[1;36m│\x1b[0m  Session: \x1b[33m' + (msg.data ?? '?') + '\x1b[0m\r\n' +
+                '\x1b[1;36m│\x1b[0m  Type \x1b[32mexit\x1b[0m or click ✕ to close.\r\n' +
+                '\x1b[1;36m└───────────────────────────────────────────────────────┘\x1b[0m\r\n'
+            )
+        } else if (msg.type === 'exit') {
+            term?.write(`\r\n\x1b[33mShell exited (code ${msg.code ?? 0})\x1b[0m\r\n`)
+            status.value = 'disconnected'
+        } else if (msg.type === 'error') {
+            errorMsg.value = msg.data ?? 'Server error'
+            status.value = 'error'
+        }
+    }
+
+    ws.onclose = (ev) => {
+        clearInterval(pingInterval!)
+        if (status.value !== 'disconnected') {
+            if (ev.code === 1006 || ev.code === 1015) {
+                status.value = 'error'
+                errorMsg.value = 'Connection lost. Ensure the backend is running on port 4000.'
+            } else {
+                status.value = 'disconnected'
+            }
+        }
+    }
+
+    ws.onerror = () => {
+        status.value = 'error'
+        errorMsg.value = 'Could not connect to ws://localhost:4000/ws/terminal — is the backend running?'
+    }
+}
+
+function reconnect() {
+    ws?.close(1000, 'Reconnecting')
     connect()
 }
 
@@ -221,11 +201,10 @@ function reconnect(): void {
 onMounted(() => {
     if (!terminalEl.value) return
 
-    // ── Initialize xterm.js ────────────────────────────────────────────────────
     term = new Terminal({
         cursorBlink: true,
         cursorStyle: 'block',
-        fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
+        fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, monospace',
         fontSize: 13,
         lineHeight: 1.35,
         theme: {
@@ -233,6 +212,7 @@ onMounted(() => {
             foreground: '#e6edf3',
             cursor: '#79c0ff',
             cursorAccent: '#0d1117',
+            selectionBackground: 'rgba(56, 139, 253, 0.4)',
             black: '#484f58',
             red: '#ff7b72',
             green: '#3fb950',
@@ -250,27 +230,24 @@ onMounted(() => {
             brightCyan: '#56d4dd',
             brightWhite: '#f0f6fc',
         },
-        allowProposedApi: true,
     })
 
     fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
     term.loadAddon(new WebLinksAddon())
-
     term.open(terminalEl.value)
     fitAddon.fit()
 
-    // ── Forward keystrokes to backend ────────────────────────────────────────
-    term.onData((data) => sendMsg({ type: 'input', data }))
+    // Keystroke → backend
+    term.onData((data: string) => sendMsg({ type: 'input', data }))
 
-    // ── Observe container resize → update PTY dimensions ────────────────────
+    // Auto-resize when the container changes size
     resizeObserver = new ResizeObserver(() => {
         fitAddon?.fit()
         sendResize()
     })
     resizeObserver.observe(terminalEl.value)
 
-    // ── Connect to backend ───────────────────────────────────────────────────
     connect()
 })
 
@@ -287,7 +264,6 @@ onBeforeUnmount(() => {
     position: relative;
 }
 
-/* Make xterm's inner canvas fill the available space */
 :deep(.xterm) {
     height: 100%;
 }

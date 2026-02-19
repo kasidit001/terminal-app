@@ -18,3 +18,5 @@ export default defineNuxtConfig({
     plugins: [cesium() as any],
   },
 })
+
+
