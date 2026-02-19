@@ -45,7 +45,7 @@
 
                 <!-- Clip to globe circle -->
                 <clipPath id="globeClip">
-                    <circle :cx="cx" :cy="cy" :r="R" />
+                    <circle cx="400" cy="400" r="355" />
                 </clipPath>
 
                 <!-- Drop shadow -->
@@ -130,7 +130,7 @@
                 </g>
 
                 <!-- Land fill -->
-                <g fill="url(#landGrad)" stroke="url(#landBorder)" stroke-width="0.8" opacity="0.95">
+                <g fill="#22c55e" stroke="#4ade80" stroke-width="0.9" opacity="0.92">
                     <path :d="northAmericaPath" />
                     <path :d="southAmericaPath" />
                     <path :d="europePath" />
@@ -353,11 +353,11 @@ const australiaPath = makePath([
 ])
 
 const antarcticaPath = makePath([
-    [-68, -180], [-72, -160], [-75, -135], [-72, -100],
-    [-68, -70], [-72, -45], [-76, -25], [-72, 0],
-    [-68, 30], [-72, 55], [-76, 80], [-72, 110],
-    [-68, 140], [-72, 165], [-68, 180],
-    [-90, 180], [-90, 0], [-90, -180],
+    [-70, -180], [-74, -150], [-76, -120], [-78, -90],
+    [-75, -60], [-74, -30], [-75, 0],
+    [-74, 30], [-76, 60], [-75, 90],
+    [-72, 120], [-74, 150], [-70, 180],
+    [-80, 180], [-80, 0], [-80, -180],
 ])
 
 const greenlandPath = makePath([
