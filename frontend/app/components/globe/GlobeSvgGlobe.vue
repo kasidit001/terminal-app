@@ -31,18 +31,6 @@
                     <stop offset="100%" stop-color="rgba(0,0,0,0.55)" />
                 </radialGradient>
 
-                <!-- Land gradient (vivid teal-green) -->
-                <linearGradient id="landGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#4ade80" />
-                    <stop offset="100%" stop-color="#16a34a" />
-                </linearGradient>
-
-                <!-- Land border -->
-                <linearGradient id="landBorder" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#86efac" />
-                    <stop offset="100%" stop-color="#22c55e" />
-                </linearGradient>
-
                 <!-- Clip to globe circle -->
                 <clipPath id="globeClip">
                     <circle cx="400" cy="400" r="355" />
@@ -79,21 +67,10 @@
                         <feMergeNode in="SourceGraphic" />
                     </feMerge>
                 </filter>
-
-                <!-- Stars: a tiny noise field -->
-                <filter id="noise">
-                    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" result="noiseOut" />
-                    <feColorMatrix type="saturate" values="0" in="noiseOut" result="grayNoise" />
-                    <feComponentTransfer in="grayNoise" result="stars">
-                        <feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 1" />
-                    </feComponentTransfer>
-                    <feComposite in="stars" in2="SourceGraphic" operator="in" />
-                </filter>
             </defs>
 
             <!-- ── Starfield background ── -->
             <g opacity="0.6">
-                <rect x="0" y="0" :width="W" :height="H" fill="transparent" />
                 <circle v-for="s in stars" :key="s.id" :cx="s.x" :cy="s.y" :r="s.r" fill="white" :opacity="s.o" />
             </g>
 
@@ -113,12 +90,12 @@
                     <ellipse v-for="lng in lngLines" :key="`lng-${lng}`" :cx="cx" :cy="cy"
                         :rx="R * Math.abs(Math.cos(lng * Math.PI / 180))" :ry="R" />
                     <!-- Equator highlight -->
-                    <line :x1="cx - R" :y1="cy" :x2="cx + R" :y2="cy" stroke="#38bdf8" stroke-width="1" opacity="1.8" />
+                    <line :x1="cx - R" :y1="cy" :x2="cx + R" :y2="cy" stroke="#38bdf8" stroke-width="1" opacity="0.8" />
                 </g>
 
                 <!-- ── Continents ── -->
                 <!-- Subtle shadow beneath each land mass -->
-                <g fill="rgba(0,0,0,0.25)" stroke="none">
+                <g fill="rgba(0,0,0,0.3)" stroke="none">
                     <path :d="northAmericaPath" transform="translate(3,4)" />
                     <path :d="southAmericaPath" transform="translate(3,4)" />
                     <path :d="europePath" transform="translate(3,4)" />
@@ -167,13 +144,11 @@
                         font-family="'Courier New', monospace" style="text-shadow: 0 1px 6px rgba(0,0,0,0.9)">{{
                             arrLabel }}</text>
 
-                    <!-- Animated plane (SVG path, not emoji) -->
+                    <!-- Animated plane (SVG path) -->
                     <g :transform="`translate(${planeX}, ${planeY}) rotate(${planeAngle})`" filter="url(#dotGlow)">
-                        <!-- Glow halo -->
                         <circle r="12" fill="#fbbf24" opacity="0.20" />
-                        <!-- Plane icon -->
                         <path d="M0,-7 L4,3 L0,1 L-4,3 Z M-1,1 L1,1 L1,5 L-1,5 Z M-5,2 L5,2 L5,3 L-5,3 Z" fill="#fbbf24"
-                            stroke="#fff8" stroke-width="0.4" />
+                            stroke="rgba(255,255,255,0.5)" stroke-width="0.4" />
                     </g>
                 </g>
             </g>
@@ -252,30 +227,20 @@ function makePath(coords: [number, number][]): string {
     return `M${pts[0]} L${pts.slice(1).join(' L')} Z`
 }
 
-// ─── Continent paths (improved shapes) ───────────────────────────────────────
+// ─── Continent paths ──────────────────────────────────────────────────────────
 
 const northAmericaPath = makePath([
-    // Alaska & NW
     [71, -156], [68, -141], [65, -168], [60, -166], [57, -153],
     [58, -136], [56, -130],
-    // West coast
     [48, -124], [38, -123], [32, -117],
-    // Mexico
     [30, -110], [24, -110], [20, -87], [16, -90], [10, -84], [8, -77],
-    // Caribbean coast
     [11, -74], [12, -72],
-    // Atlantic coast
     [18, -66], [25, -77], [30, -81], [35, -76], [42, -70],
     [45, -66], [47, -53],
-    // Eastern Canada
     [51, -56], [58, -68], [63, -64], [64, -83],
     [60, -94], [58, -94],
-    // Hudson + Arctic
     [62, -82], [66, -83], [72, -80], [74, -94],
     [76, -85], [76, -70], [72, -68],
-    // Baffin
-    [72, -80], [70, -95], [68, -95],
-    // Back to Alaska
     [70, -140], [71, -156],
 ])
 
@@ -302,42 +267,29 @@ const europePath = makePath([
 ])
 
 const africaPath = makePath([
-    // North coast
     [37, -5], [37, 12], [33, 11], [30, 32], [28, 34],
     [22, 37], [12, 44], [11, 43],
-    // East coast
     [5, 41], [0, 42], [-5, 40],
     [-10, 38], [-15, 35],
-    // South
     [-25, 33], [-30, 30], [-34, 26], [-34, 18],
-    // West coast
     [-28, 16], [-18, 12], [-10, 15],
     [-5, 10], [0, 10], [5, -5],
     [10, -15], [15, -17], [21, -17],
-    // North-west
     [30, -10], [35, -6], [37, -5],
 ])
 
 const asiaPath = makePath([
-    // Russia west to east
     [70, 30], [72, 55], [72, 80], [72, 110], [72, 130],
     [68, 141], [60, 141], [55, 135], [50, 142],
     [48, 140], [43, 132], [38, 130],
-    // Korea / China coast
     [35, 120], [28, 121], [22, 114], [18, 110],
     [12, 109], [10, 105], [5, 103], [1, 104],
-    [-6, 107], [-8, 115], [-8, 140],
-    // SE Asia
     [5, 100], [8, 98], [10, 99], [13, 100],
     [20, 93], [20, 88],
-    // India
     [22, 88], [8, 77], [9, 78], [22, 73],
     [23, 68], [25, 65], [22, 60],
-    // Arabian peninsula
     [26, 57], [24, 57], [15, 50], [12, 44],
-    // Back north (Tigris/Euphrates)
     [30, 48], [37, 44], [38, 44], [40, 44],
-    // Turkey / Caucasus / Central Asia
     [40, 50], [42, 50], [44, 52], [48, 60],
     [52, 68], [55, 80], [58, 92], [62, 100],
     [65, 90], [68, 68], [70, 58], [70, 40], [70, 30],

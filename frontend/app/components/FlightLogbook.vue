@@ -45,7 +45,7 @@
             <div class="grid grid-cols-3 gap-2 px-2">
                 <div class="glass-card p-3 text-center">
                     <p class="text-2xl font-mono font-bold text-white">{{ stats?.totalFlights ?? statsStore.totalFlights
-                        }}</p>
+                    }}</p>
                     <p class="label-sm mt-0.5">Flights</p>
                 </div>
                 <div class="glass-card p-3 text-center">
