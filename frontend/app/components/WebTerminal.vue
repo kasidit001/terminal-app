@@ -61,6 +61,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { Terminal } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
+import { WebLinksAddon } from '@xterm/addon-web-links'
+import '@xterm/xterm/css/xterm.css'
 
 // ── Props / Emits ─────────────────────────────────────────────────────────────
 interface Props {
@@ -102,16 +106,13 @@ const statusLabel = computed(() => ({
 }[status.value]))
 
 // ── Internal handles ──────────────────────────────────────────────────────────
-// Using `any` because xterm is loaded as a UMD global at runtime, not a package
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let term: any = null
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let fitAddon: any = null
+let term: Terminal | null = null
+let fitAddon: FitAddon | null = null
 let ws: WebSocket | null = null
 let pingInterval: ReturnType<typeof setInterval> | null = null
 let resizeObserver: ResizeObserver | null = null
 
-// ── Shared message types ──────────────────────────────────────────────────────
+// ── Message protocol ──────────────────────────────────────────────────────────
 interface ServerMessage {
     type: 'output' | 'exit' | 'error' | 'pong' | 'ready'
     data?: string
@@ -124,7 +125,8 @@ type ClientMessage =
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function buildWsUrl() {
-    const base = props.wsUrl || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hostname}:4000`
+    const base = props.wsUrl
+        || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hostname}:4000`
     return `${base}/ws/terminal?token=${encodeURIComponent(props.authToken)}`
 }
 
@@ -137,7 +139,7 @@ function sendResize() {
     sendMsg({ type: 'resize', cols: term.cols, rows: term.rows })
 }
 
-// ── WebSocket connect / reconnect ─────────────────────────────────────────────
+// ── WebSocket connect ─────────────────────────────────────────────────────────
 function connect() {
     status.value = 'connecting'
     errorMsg.value = null
@@ -147,7 +149,6 @@ function connect() {
     ws.onopen = () => {
         status.value = 'connected'
         sendResize()
-        // Keep-alive heartbeat
         pingInterval = setInterval(() => sendMsg({ type: 'ping' }), 25_000)
     }
 
@@ -200,22 +201,7 @@ function reconnect() {
 onMounted(() => {
     if (!terminalEl.value) return
 
-    // xterm.js is loaded as UMD via CDN <script> tag — grab from window
-    // The CDN bundles expose: window.Terminal, window.FitAddon.FitAddon, window.WebLinksAddon.WebLinksAddon
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any
-    const TerminalCtor = w.Terminal
-    const FitAddonCtor = w.FitAddon?.FitAddon ?? w.FitAddon
-    const WebLinksCtor = w.WebLinksAddon?.WebLinksAddon ?? w.WebLinksAddon
-
-    if (!TerminalCtor) {
-        errorMsg.value = 'xterm.js failed to load. Check CDN availability.'
-        status.value = 'error'
-        return
-    }
-
-    // ── Initialize terminal ──────────────────────────────────────────────────
-    term = new TerminalCtor({
+    term = new Terminal({
         cursorBlink: true,
         cursorStyle: 'block',
         fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, monospace',
@@ -246,28 +232,22 @@ onMounted(() => {
         },
     })
 
-    if (FitAddonCtor) {
-        fitAddon = new FitAddonCtor()
-        term.loadAddon(fitAddon)
-    }
-    if (WebLinksCtor) {
-        term.loadAddon(new WebLinksCtor())
-    }
-
+    fitAddon = new FitAddon()
+    term.loadAddon(fitAddon)
+    term.loadAddon(new WebLinksAddon())
     term.open(terminalEl.value)
-    fitAddon?.fit()
+    fitAddon.fit()
 
     // Keystroke → backend
     term.onData((data: string) => sendMsg({ type: 'input', data }))
 
-    // Auto-resize on container size change
+    // Auto-resize when the container changes size
     resizeObserver = new ResizeObserver(() => {
         fitAddon?.fit()
         sendResize()
     })
     resizeObserver.observe(terminalEl.value)
 
-    // Open WebSocket
     connect()
 })
 
@@ -284,14 +264,12 @@ onBeforeUnmount(() => {
     position: relative;
 }
 
-/* Let xterm fill the flex container */
 :deep(.xterm) {
     height: 100%;
 }
 
 :deep(.xterm-viewport) {
     overflow-y: auto !important;
-    border-radius: 0;
 }
 
 .fade-enter-active,
