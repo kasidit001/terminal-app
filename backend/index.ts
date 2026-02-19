@@ -8,9 +8,8 @@ import cors from 'cors';
 import http from 'http';
 
 const PORT = Number(process.env.PORT ?? 4000);
-const EXPR_PORT = PORT + 1; // Express listens on 4001 internally
 
-// ── Express app (REST API) ─────────────────────────────────────────────────
+// ── Express app (REST API) ────────────────────────────────────────────────────
 const app = express();
 app.use(cors({ origin: '*' }));
 app.use(express.json());
@@ -19,7 +18,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', terminalSessions: activeSessionCount() });
 });
 
-// ── Boot ───────────────────────────────────────────────────────────────────
+// ── Boot ──────────────────────────────────────────────────────────────────────
 (async () => {
   try {
     await sequelize.authenticate();
@@ -27,15 +26,19 @@ app.get('/health', (_req, res) => {
     await sequelize.sync({ force: false });
     console.log('[DB] Synchronized.');
 
-    // 1. Start Express on internal port (REST only)
-    await new Promise<void>((resolve) =>
-      http.createServer(app).listen(EXPR_PORT, () => {
-        console.log(`[Express] REST API on http://localhost:${EXPR_PORT}`);
-        resolve();
-      })
-    );
+    // Start Express on a random available port (0 = OS picks one for us)
+    const exprServer = http.createServer(app);
+    const exprPort = await new Promise<number>((resolve, reject) => {
+      exprServer.listen(0, () => {
+        const addr = exprServer.address();
+        if (addr && typeof addr === 'object') resolve(addr.port);
+        else reject(new Error('Could not determine Express port'));
+      });
+      exprServer.on('error', reject);
+    });
+    console.log(`[Express] REST API on internal port ${exprPort}`);
 
-    // 2. Start Bun.serve on the public port (WS + proxy REST to Express)
+    // Bun.serve on the public port — handles WS + proxies REST to Express
     const server = Bun.serve({
       port: PORT,
 
@@ -48,14 +51,10 @@ app.get('/health', (_req, res) => {
             ?? new Response(null, { status: 101 });
         }
 
-        // Proxy everything else to Express
+        // Proxy REST requests to Express
         const proxied = new Request(
-          `http://localhost:${EXPR_PORT}${url.pathname}${url.search}`,
-          {
-            method: req.method,
-            headers: req.headers,
-            body: req.body,
-          }
+          `http://localhost:${exprPort}${url.pathname}${url.search}`,
+          { method: req.method, headers: req.headers, body: req.body }
         );
         try {
           return await fetch(proxied);
@@ -67,8 +66,9 @@ app.get('/health', (_req, res) => {
       websocket: terminalWsHandler,
     });
 
-    console.log(`[Bun]  Public server on http://localhost:${server.port}`);
-    console.log(`[Bun]  Terminal WebSocket at ws://localhost:${server.port}/ws/terminal`);
+    console.log(`[Server] http://localhost:${server.port}`);
+    console.log(`[WS]     ws://localhost:${server.port}/ws/terminal`);
+
   } catch (err) {
     console.error('Startup failed:', err);
     process.exit(1);
